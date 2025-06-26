@@ -1,0 +1,38 @@
+{
+  "settings": {
+    "timezone": "America/New_York",
+    "adminPassword": "admin123",
+    "defaultCollectionPath": "./collections"
+  },
+  "activeSchedules": [],
+  "collections": {
+    "sample": {
+      "name": "Sample Audio Collection",
+      "path": "./audio",
+      "files": [
+        "74. Elements of Akarma 1 (29.11.20).mp3",
+        "Hare Krsna Kirtana.mp3"
+      ]
+    }
+  },
+  "schedules": {
+    "sample_schedule": {
+      "name": "Sample Schedule",
+      "collection": "sample",
+      "enabled": false,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "*",
+          "startTime": "09:00",
+          "endTime": "17:00",
+          "timezone": "America/New_York"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    }
+  }
+}
