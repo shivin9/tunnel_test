@@ -1,6 +1,6 @@
 {
   "settings": {
-    "timezone": "America/New_York",
+    "timezone": "Asia/Kolkata",
     "adminPassword": "admin123",
     "defaultCollectionPath": "./collections"
   },
@@ -35,7 +35,7 @@
           "dayOfWeek": "*",
           "startTime": "17:45",
           "endTime": "18:30",
-          "timezone": "America/New_York"
+          "timezone": "Asia/Kolkata"
         }
       ],
       "dateRange": {
@@ -53,7 +53,7 @@
           "dayOfWeek": "*",
           "startTime": "00:00",
           "endTime": "23:59",
-          "timezone": "America/New_York"
+          "timezone": "Asia/Kolkata"
         }
       ],
       "dateRange": {

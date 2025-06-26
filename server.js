@@ -29,7 +29,7 @@ function loadConfig() {
             // Default configuration
             config = {
                 settings: {
-                    timezone: "America/New_York",
+                    timezone: "Asia/Kolkata",
                     adminPassword: "admin123",
                     defaultCollectionPath: "./collections"
                 },
@@ -56,7 +56,7 @@ function saveConfig() {
 // Time and scheduling utilities
 function isTimeInSchedule(schedule) {
     const now = new Date();
-    const timezone = schedule.timeSlots[0]?.timezone || config.settings.timezone || 'America/New_York';
+    const timezone = schedule.timeSlots[0]?.timezone || config.settings.timezone || 'Asia/Kolkata';
     
     try {
         // Get current time in the specified timezone
@@ -321,7 +321,7 @@ app.post('/admin/settings', (req, res) => {
 app.post('/admin/reset', (req, res) => {
     config = {
         settings: {
-            timezone: "America/New_York",
+            timezone: "Asia/Kolkata",
             adminPassword: "admin123",
             defaultCollectionPath: "./collections"
         },

@@ -290,7 +290,7 @@ function setupFormHandlers() {
                 dayOfWeek: document.getElementById('schedule-days').value,
                 startTime: document.getElementById('schedule-start-time').value,
                 endTime: document.getElementById('schedule-end-time').value,
-                timezone: config.settings?.timezone || 'America/New_York'
+                timezone: config.settings?.timezone || 'Asia/Kolkata'
             }],
             dateRange: {
                 startDate: document.getElementById('schedule-start-date').value || null,
