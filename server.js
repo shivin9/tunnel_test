@@ -2,6 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const session = require('express-session');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = 8000;
@@ -13,9 +17,19 @@ app.use(express.json());
 app.use(cors({
     origin: '*',
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Range', 'Content-Type', 'Accept-Ranges'],
+    allowedHeaders: ['Range', 'Content-Type', 'Accept-Ranges', 'Authorization'],
     exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
 }));
+
+app.use(session({
+    secret: 'audio-server-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }
+}));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuration management
 let config = {};
@@ -31,8 +45,18 @@ function loadConfig() {
                 settings: {
                     timezone: "Asia/Kolkata",
                     adminPassword: "admin123",
-                    defaultCollectionPath: "./collections"
+                    defaultCollectionPath: "./collections",
+                    jwtSecret: "your-secret-key-change-this",
+                    emailEnabled: false,
+                    smtpSettings: {
+                        host: "smtp.gmail.com",
+                        port: 587,
+                        user: "",
+                        password: ""
+                    }
                 },
+                users: {},
+                userSchedules: {},
                 activeSchedules: [],
                 collections: {},
                 schedules: {}
@@ -125,6 +149,104 @@ function timeToMinutes(timeString) {
     return hours * 60 + minutes;
 }
 
+// Authentication middleware
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    jwt.verify(token, config.settings.jwtSecret, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+// Generate JWT token
+function generateToken(user) {
+    return jwt.sign(
+        { userId: user.id, email: user.email, name: user.name },
+        config.settings.jwtSecret,
+        { expiresIn: '24h' }
+    );
+}
+
+// User management functions
+function createUser(userData) {
+    const userId = uuidv4();
+    const hashedPassword = bcrypt.hashSync(userData.password, 10);
+    
+    const user = {
+        id: userId,
+        name: userData.name,
+        email: userData.email.toLowerCase(),
+        password: hashedPassword,
+        verified: false,
+        createdAt: new Date().toISOString(),
+        schedules: []
+    };
+    
+    config.users[userId] = user;
+    config.userSchedules[userId] = [];
+    saveConfig();
+    
+    return user;
+}
+
+function findUserByEmail(email) {
+    return Object.values(config.users).find(user => user.email === email.toLowerCase());
+}
+
+function getUserSchedules(userId) {
+    const userSchedules = config.userSchedules[userId] || [];
+    const currentTime = new Date();
+    
+    return userSchedules.map(scheduleId => {
+        const schedule = config.schedules[scheduleId];
+        if (!schedule) return null;
+        
+        return {
+            id: scheduleId,
+            name: schedule.name,
+            collection: schedule.collection,
+            enabled: schedule.enabled,
+            dayOfWeek: schedule.timeSlots[0]?.dayOfWeek || '*',
+            startTime: schedule.timeSlots[0]?.startTime || '',
+            endTime: schedule.timeSlots[0]?.endTime || '',
+            isActive: schedule.enabled && isTimeInSchedule(schedule)
+        };
+    }).filter(s => s !== null);
+}
+
+function getUserAvailableFiles(userId) {
+    const userSchedules = getUserSchedules(userId);
+    const activeUserSchedules = userSchedules.filter(s => s.isActive);
+    const activeFiles = [];
+    
+    activeUserSchedules.forEach(schedule => {
+        const collection = config.collections[schedule.collection];
+        if (collection && collection.files) {
+            collection.files.forEach(file => {
+                if (!activeFiles.some(f => f.name === file)) {
+                    activeFiles.push({
+                        name: file,
+                        url: `/${encodeURIComponent(file)}`,
+                        collection: schedule.collection,
+                        schedule: schedule.id
+                    });
+                }
+            });
+        }
+    });
+    
+    return activeFiles;
+}
+
 function getActiveFiles() {
     const activeFiles = [];
     
@@ -172,6 +294,125 @@ function getActiveFiles() {
     
     return activeFiles;
 }
+
+// Authentication routes
+app.post('/auth/register', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+        
+        // Validate input
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Name, email, and password are required' });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+        
+        // Check if user already exists
+        if (findUserByEmail(email)) {
+            return res.status(400).json({ error: 'User with this email already exists' });
+        }
+        
+        // Create user
+        const user = createUser({ name, email, password });
+        
+        // Generate token
+        const token = generateToken(user);
+        
+        console.log(`✅ New user registered: ${email}`);
+        
+        res.json({
+            message: 'User registered successfully',
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                verified: user.verified
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
+app.post('/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        // Find user
+        const user = findUserByEmail(email);
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Check password
+        const isValidPassword = bcrypt.compareSync(password, user.password);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Generate token
+        const token = generateToken(user);
+        
+        console.log(`✅ User logged in: ${email}`);
+        
+        res.json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                verified: user.verified
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+app.get('/auth/me', authenticateToken, (req, res) => {
+    const user = config.users[req.user.userId];
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            verified: user.verified
+        }
+    });
+});
+
+// User-specific routes
+app.get('/user/schedules', authenticateToken, (req, res) => {
+    const schedules = getUserSchedules(req.user.userId);
+    res.json(schedules);
+});
+
+app.get('/user/available-files', authenticateToken, (req, res) => {
+    const files = getUserAvailableFiles(req.user.userId);
+    res.json({ audioFiles: files });
+});
+
+app.get('/user/stats', authenticateToken, (req, res) => {
+    const userSchedules = getUserSchedules(req.user.userId);
+    const availableFiles = getUserAvailableFiles(req.user.userId);
+    const activeSchedules = userSchedules.filter(s => s.isActive);
+    
+    res.json({
+        totalSchedules: userSchedules.length,
+        activeSchedules: activeSchedules.length,
+        availableFiles: availableFiles.length
+    });
+});
 
 // Serve admin UI
 app.use('/admin', express.static(ADMIN_UI_DIR));
@@ -357,6 +598,52 @@ app.post('/admin/settings', (req, res) => {
     }
     
     saveConfig();
+    res.json({ success: true });
+});
+
+// Admin user management endpoints
+app.get('/admin/users', (req, res) => {
+    res.json(config.users || {});
+});
+
+app.post('/admin/users/assign-schedule', (req, res) => {
+    const { userId, scheduleId } = req.body;
+    
+    if (!config.users[userId]) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (!config.schedules[scheduleId]) {
+        return res.status(404).json({ error: 'Schedule not found' });
+    }
+    
+    // Initialize user schedules if needed
+    if (!config.userSchedules[userId]) {
+        config.userSchedules[userId] = [];
+    }
+    
+    // Add schedule if not already assigned
+    if (!config.userSchedules[userId].includes(scheduleId)) {
+        config.userSchedules[userId].push(scheduleId);
+        saveConfig();
+        console.log(`✅ Assigned schedule "${scheduleId}" to user "${config.users[userId].name}"`);
+    }
+    
+    res.json({ success: true });
+});
+
+app.post('/admin/users/remove-schedules', (req, res) => {
+    const { userId } = req.body;
+    
+    if (!config.users[userId]) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Remove all schedules for this user
+    config.userSchedules[userId] = [];
+    saveConfig();
+    
+    console.log(`✅ Removed all schedules from user "${config.users[userId].name}"`);
     res.json({ success: true });
 });
 

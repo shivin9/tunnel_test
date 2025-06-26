@@ -2,7 +2,29 @@
   "settings": {
     "timezone": "Asia/Kolkata",
     "adminPassword": "admin123",
-    "defaultCollectionPath": "./collections"
+    "defaultCollectionPath": "./collections",
+    "jwtSecret": "your-secret-key-change-this",
+    "emailEnabled": false,
+    "smtpSettings": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "user": "",
+      "password": ""
+    }
+  },
+  "users": {
+    "6f6e7009-fdef-4ba9-bd1d-45f397a4ca01": {
+      "id": "6f6e7009-fdef-4ba9-bd1d-45f397a4ca01",
+      "name": "Shivin",
+      "email": "shivin.srivastava@gmail.com",
+      "password": "$2b$10$lk50bLlV6Y8YJka/qsjnLO31CROCV2yh8QvGYmehe/6xgz/xkVB/y",
+      "verified": false,
+      "createdAt": "2025-06-26T11:19:48.097Z",
+      "schedules": []
+    }
+  },
+  "userSchedules": {
+    "6f6e7009-fdef-4ba9-bd1d-45f397a4ca01": []
   },
   "activeSchedules": [
     "geetika_didi_schedule"

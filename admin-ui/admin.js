@@ -38,6 +38,10 @@ function showTab(tabName) {
     } else if (tabName === 'schedules') {
         loadSchedules();
         loadCollectionsForSchedule();
+    } else if (tabName === 'users') {
+        loadUsers();
+        loadUsersForAssignment();
+        loadSchedulesForAssignment();
     } else if (tabName === 'dashboard') {
         loadDashboard();
     }
@@ -368,6 +372,26 @@ function setupFormHandlers() {
             loadConfig();
         } catch (error) {
             console.error('Failed to save settings:', error);
+        }
+    });
+    
+    // User schedule assignment form
+    document.getElementById('user-schedule-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userId = document.getElementById('user-select').value;
+        const scheduleId = document.getElementById('user-schedule-select').value;
+        
+        try {
+            await apiCall('/admin/users/assign-schedule', 'POST', {
+                userId,
+                scheduleId
+            });
+            showAlert('Schedule assigned to user successfully!', 'success');
+            this.reset();
+            loadUsers(); // Refresh user list
+        } catch (error) {
+            console.error('Failed to assign schedule:', error);
         }
     });
 }
@@ -708,6 +732,88 @@ async function resetConfig() {
             showAlert('Configuration reset to defaults!', 'success');
         } catch (error) {
             console.error('Failed to reset config:', error);
+        }
+    }
+}
+
+// User Management Functions
+async function loadUsers() {
+    try {
+        const users = await apiCall('/admin/users');
+        displayUsers(users);
+    } catch (error) {
+        document.getElementById('users-list').innerHTML = '<p>Error loading users</p>';
+    }
+}
+
+function displayUsers(users) {
+    const listDiv = document.getElementById('users-list');
+    
+    if (!users || Object.keys(users).length === 0) {
+        listDiv.innerHTML = '<p>No users registered yet</p>';
+        return;
+    }
+    
+    listDiv.innerHTML = Object.entries(users).map(([userId, user]) => {
+        const userSchedules = config.userSchedules && config.userSchedules[userId] 
+            ? config.userSchedules[userId].length 
+            : 0;
+        
+        return `
+            <div class="schedule-item">
+                <h4>${user.name}</h4>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Registered:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+                <p><strong>Assigned Schedules:</strong> ${userSchedules}</p>
+                <p><strong>Status:</strong> ${user.verified ? 'Verified' : 'Unverified'}</p>
+                <button class="btn btn-danger" onclick="removeUserSchedules('${userId}')">Remove All Schedules</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadUsersForAssignment() {
+    try {
+        const users = await apiCall('/admin/users');
+        const select = document.getElementById('user-select');
+        
+        select.innerHTML = '<option value="">Select a user</option>';
+        Object.entries(users).forEach(([userId, user]) => {
+            const option = document.createElement('option');
+            option.value = userId;
+            option.textContent = `${user.name} (${user.email})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load users for assignment:', error);
+    }
+}
+
+async function loadSchedulesForAssignment() {
+    try {
+        const schedules = await apiCall('/admin/schedules');
+        const select = document.getElementById('user-schedule-select');
+        
+        select.innerHTML = '<option value="">Select a schedule</option>';
+        Object.entries(schedules).forEach(([scheduleId, schedule]) => {
+            const option = document.createElement('option');
+            option.value = scheduleId;
+            option.textContent = schedule.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load schedules for assignment:', error);
+    }
+}
+
+async function removeUserSchedules(userId) {
+    if (confirm('Are you sure you want to remove all schedules from this user?')) {
+        try {
+            await apiCall('/admin/users/remove-schedules', 'POST', { userId });
+            loadUsers();
+            showAlert('All schedules removed from user!', 'success');
+        } catch (error) {
+            console.error('Failed to remove user schedules:', error);
         }
     }
 }
