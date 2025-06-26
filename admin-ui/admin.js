@@ -817,3 +817,21 @@ async function removeUserSchedules(userId) {
         }
     }
 }
+
+// Admin logout function
+async function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        try {
+            await apiCall('/admin/logout', 'POST');
+            // Clear any local storage
+            localStorage.removeItem('adminAuthenticated');
+            localStorage.removeItem('adminAuthTime');
+            // Redirect to admin login
+            window.location.href = '/admin-login.html';
+        } catch (error) {
+            console.error('Logout failed:', error);
+            // Force redirect even if API call fails
+            window.location.href = '/admin-login.html';
+        }
+    }
+}

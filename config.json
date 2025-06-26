@@ -1,7 +1,7 @@
 {
   "settings": {
     "timezone": "Asia/Kolkata",
-    "adminPassword": "admin123",
+    "adminPassword": "HareKrishna",
     "defaultCollectionPath": "./collections",
     "jwtSecret": "your-secret-key-change-this",
     "emailEnabled": false,

@@ -167,6 +167,17 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// Admin authentication middleware
+function authenticateAdmin(req, res, next) {
+    const isAuthenticated = req.session.adminAuthenticated;
+    
+    if (!isAuthenticated) {
+        return res.redirect('/admin-login.html');
+    }
+    
+    next();
+}
+
 // Generate JWT token
 function generateToken(user) {
     return jwt.sign(
@@ -391,6 +402,38 @@ app.get('/auth/me', authenticateToken, (req, res) => {
     });
 });
 
+// Admin authentication route
+app.post('/admin/authenticate', (req, res) => {
+    const { password } = req.body;
+    
+    if (!password) {
+        return res.status(400).json({ error: 'Password is required' });
+    }
+    
+    if (password !== config.settings.adminPassword) {
+        console.log(`❌ Failed admin login attempt`);
+        return res.status(401).json({ error: 'Invalid admin password' });
+    }
+    
+    // Set admin session
+    req.session.adminAuthenticated = true;
+    req.session.adminAuthTime = new Date().getTime();
+    
+    console.log(`✅ Admin authenticated successfully`);
+    res.json({ success: true, message: 'Admin authentication successful' });
+});
+
+// Admin logout route
+app.post('/admin/logout', (req, res) => {
+    req.session.adminAuthenticated = false;
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Logout failed' });
+        }
+        res.json({ success: true, message: 'Logged out successfully' });
+    });
+});
+
 // User-specific routes
 app.get('/user/schedules', authenticateToken, (req, res) => {
     const schedules = getUserSchedules(req.user.userId);
@@ -414,21 +457,21 @@ app.get('/user/stats', authenticateToken, (req, res) => {
     });
 });
 
-// Serve admin UI
-app.use('/admin', express.static(ADMIN_UI_DIR));
+// Serve admin UI with authentication
+app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
 
-// Admin API endpoints
-app.get('/admin/config', (req, res) => {
+// Admin API endpoints (all protected)
+app.get('/admin/config', authenticateAdmin, (req, res) => {
     res.json(config);
 });
 
-app.post('/admin/config', (req, res) => {
+app.post('/admin/config', authenticateAdmin, (req, res) => {
     config = { ...config, ...req.body };
     saveConfig();
     res.json({ success: true });
 });
 
-app.get('/admin/status', (req, res) => {
+app.get('/admin/status', authenticateAdmin, (req, res) => {
     const activeSchedules = Object.entries(config.schedules)
         .filter(([id, schedule]) => schedule.enabled && isTimeInSchedule(schedule))
         .map(([id, schedule]) => ({ id, name: schedule.name }));
@@ -442,11 +485,11 @@ app.get('/admin/status', (req, res) => {
     });
 });
 
-app.get('/admin/collections', (req, res) => {
+app.get('/admin/collections', authenticateAdmin, (req, res) => {
     res.json(config.collections);
 });
 
-app.post('/admin/collections', (req, res) => {
+app.post('/admin/collections', authenticateAdmin, (req, res) => {
     const { name, path, files } = req.body;
     const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
@@ -460,7 +503,7 @@ app.post('/admin/collections', (req, res) => {
     res.json({ success: true, id });
 });
 
-app.put('/admin/collections/:id', (req, res) => {
+app.put('/admin/collections/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     const { name, path, files } = req.body;
     
@@ -478,18 +521,18 @@ app.put('/admin/collections/:id', (req, res) => {
     res.json({ success: true });
 });
 
-app.delete('/admin/collections/:id', (req, res) => {
+app.delete('/admin/collections/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     delete config.collections[id];
     saveConfig();
     res.json({ success: true });
 });
 
-app.get('/admin/schedules', (req, res) => {
+app.get('/admin/schedules', authenticateAdmin, (req, res) => {
     res.json(config.schedules);
 });
 
-app.post('/admin/schedules', (req, res) => {
+app.post('/admin/schedules', authenticateAdmin, (req, res) => {
     const schedule = req.body;
     const id = schedule.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
@@ -505,7 +548,7 @@ app.post('/admin/schedules', (req, res) => {
     res.json({ success: true, id });
 });
 
-app.put('/admin/schedules/:id', (req, res) => {
+app.put('/admin/schedules/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     const schedule = req.body;
     
@@ -525,7 +568,7 @@ app.put('/admin/schedules/:id', (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/admin/schedules/:id/toggle', (req, res) => {
+app.post('/admin/schedules/:id/toggle', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     if (config.schedules[id]) {
         config.schedules[id].enabled = !config.schedules[id].enabled;
@@ -536,14 +579,14 @@ app.post('/admin/schedules/:id/toggle', (req, res) => {
     }
 });
 
-app.delete('/admin/schedules/:id', (req, res) => {
+app.delete('/admin/schedules/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     delete config.schedules[id];
     saveConfig();
     res.json({ success: true });
 });
 
-app.get('/admin/browse', (req, res) => {
+app.get('/admin/browse', authenticateAdmin, (req, res) => {
     const browsePath = req.query.path || './collections';
     const fullPath = path.resolve(__dirname, browsePath);
     
@@ -576,7 +619,7 @@ app.get('/admin/browse', (req, res) => {
     }
 });
 
-app.post('/admin/settings', (req, res) => {
+app.post('/admin/settings', authenticateAdmin, (req, res) => {
     const oldTimezone = config.settings.timezone;
     config.settings = { ...config.settings, ...req.body };
     
@@ -602,11 +645,11 @@ app.post('/admin/settings', (req, res) => {
 });
 
 // Admin user management endpoints
-app.get('/admin/users', (req, res) => {
+app.get('/admin/users', authenticateAdmin, (req, res) => {
     res.json(config.users || {});
 });
 
-app.post('/admin/users/assign-schedule', (req, res) => {
+app.post('/admin/users/assign-schedule', authenticateAdmin, (req, res) => {
     const { userId, scheduleId } = req.body;
     
     if (!config.users[userId]) {
@@ -632,7 +675,7 @@ app.post('/admin/users/assign-schedule', (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/admin/users/remove-schedules', (req, res) => {
+app.post('/admin/users/remove-schedules', authenticateAdmin, (req, res) => {
     const { userId } = req.body;
     
     if (!config.users[userId]) {
@@ -647,7 +690,7 @@ app.post('/admin/users/remove-schedules', (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/admin/reset', (req, res) => {
+app.post('/admin/reset', authenticateAdmin, (req, res) => {
     config = {
         settings: {
             timezone: "Asia/Kolkata",
@@ -765,8 +808,8 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Serve main interface
-app.get('/', (req, res) => {
+// Serve audio files page (moved from root)
+app.get('/audio-files', (req, res) => {
     const activeFiles = getActiveFiles();
     
     const html = `
@@ -775,7 +818,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scheduled Audio Server</title>
+    <title>Audio Files - Scheduled Audio Server</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -851,10 +894,15 @@ app.get('/', (req, res) => {
             color: #718096;
         }
         
-        .admin-link {
+        .nav-links {
             position: fixed;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-link {
             background: #667eea;
             color: white;
             padding: 10px 20px;
@@ -865,17 +913,20 @@ app.get('/', (req, res) => {
             transition: all 0.3s ease;
         }
         
-        .admin-link:hover {
+        .nav-link:hover {
             background: #5a67d8;
             transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
-    <a href="/admin" class="admin-link">⚙️ Admin</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">🏠 Home</a>
+        <a href="/admin" class="nav-link">⚙️ Admin</a>
+    </div>
     
     <div class="container">
-        <h1>Audio Server</h1>
+        <h1>Audio Files</h1>
         
         <div class="status">
             ${activeFiles.length > 0 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Audio Server</title>
+    <title>Admin Login - Audio Server</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -25,7 +25,7 @@
             background: white;
             border-radius: 15px;
             padding: 40px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
             width: 100%;
             max-width: 400px;
         }
@@ -36,14 +36,19 @@
         }
 
         .auth-header h1 {
-            color: #4a5568;
-            font-size: 2em;
+            color: #2d3748;
+            font-size: 2.2em;
             margin-bottom: 10px;
         }
 
         .auth-header p {
             color: #718096;
             font-size: 1em;
+        }
+
+        .admin-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
         }
 
         .form-group {
@@ -68,7 +73,7 @@
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #4a5568;
         }
 
         .btn {
@@ -84,12 +89,12 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #4a5568;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5a67d8;
+            background: #2d3748;
         }
 
         .btn-secondary {
@@ -126,7 +131,7 @@
         .loading {
             display: none;
             text-align: center;
-            color: #667eea;
+            color: #4a5568;
         }
 
         .form-links {
@@ -135,7 +140,7 @@
         }
 
         .form-links a {
-            color: #667eea;
+            color: #4a5568;
             text-decoration: none;
             margin: 0 10px;
         }
@@ -144,84 +149,81 @@
             text-decoration: underline;
         }
 
-        .admin-link {
-            background: #4a5568;
-            color: white;
-            text-decoration: none;
-            display: block;
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .admin-link:hover {
-            background: #2d3748;
+        .security-notice {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            border: 1px solid #ffeaa7;
         }
     </style>
 </head>
 <body>
     <div class="auth-container">
         <div class="auth-header">
-            <h1>🎵 Login</h1>
-            <p>Access your audio schedules</p>
+            <div class="admin-icon">🔐</div>
+            <h1>Admin Access</h1>
+            <p>Enter admin credentials to continue</p>
+        </div>
+
+        <div class="security-notice">
+            <strong>⚠️ Authorized Personnel Only</strong><br>
+            This area is restricted to administrators only.
         </div>
 
         <div id="alert" class="alert"></div>
-        <div id="loading" class="loading">Signing you in...</div>
+        <div id="loading" class="loading">Authenticating...</div>
 
-        <form id="login-form">
+        <form id="admin-login-form">
             <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" required>
+                <label for="admin-password">Admin Password</label>
+                <input type="password" id="admin-password" required placeholder="Enter admin password">
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" required>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Sign In</button>
-            <a href="/register.html" class="btn btn-secondary">Create Account</a>
-            <a href="/admin-login.html" class="btn btn-secondary admin-link">Admin Panel</a>
+            <button type="submit" class="btn btn-primary">Access Admin Panel</button>
+            <a href="/" class="btn btn-secondary">← Back to Home</a>
         </form>
 
         <div class="form-links">
-            <a href="/">← Back to Home</a>
+            <a href="/login.html">Participant Login</a>
         </div>
     </div>
 
     <script>
-        document.getElementById('login-form').addEventListener('submit', async function(e) {
+        document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const password = document.getElementById('admin-password').value;
             
             showLoading(true);
             
             try {
-                const response = await fetch('/auth/login', {
+                const response = await fetch('/admin/authenticate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ password })
                 });
                 
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showAlert('Login successful! Redirecting...', 'success');
-                    // Store token
-                    localStorage.setItem('authToken', result.token);
+                    showAlert('Authentication successful! Redirecting...', 'success');
+                    // Store admin session
+                    localStorage.setItem('adminAuthenticated', 'true');
+                    localStorage.setItem('adminAuthTime', new Date().getTime().toString());
                     
                     setTimeout(() => {
-                        window.location.href = '/dashboard.html';
+                        window.location.href = '/admin/';
                     }, 1000);
                 } else {
-                    showAlert(result.error || 'Login failed', 'error');
+                    showAlert(result.error || 'Authentication failed', 'error');
                 }
             } catch (error) {
-                showAlert('Login failed. Please try again.', 'error');
+                showAlert('Authentication failed. Please try again.', 'error');
             }
             
             showLoading(false);
@@ -240,8 +242,31 @@
         
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
-            document.getElementById('login-form').style.display = show ? 'none' : 'block';
+            document.getElementById('admin-login-form').style.display = show ? 'none' : 'block';
         }
+
+        // Check if already authenticated
+        document.addEventListener('DOMContentLoaded', function() {
+            const isAuthenticated = localStorage.getItem('adminAuthenticated');
+            const authTime = localStorage.getItem('adminAuthTime');
+            
+            // Check if authentication is still valid (24 hours)
+            if (isAuthenticated && authTime) {
+                const now = new Date().getTime();
+                const authTimestamp = parseInt(authTime);
+                const hoursPassed = (now - authTimestamp) / (1000 * 60 * 60);
+                
+                if (hoursPassed < 24) {
+                    // Still authenticated, redirect to admin panel
+                    window.location.href = '/admin/';
+                    return;
+                }
+            }
+            
+            // Clear expired authentication
+            localStorage.removeItem('adminAuthenticated');
+            localStorage.removeItem('adminAuthTime');
+        });
     </script>
 </body>
 </html>
