@@ -299,15 +299,24 @@ app.get('/admin/browse', (req, res) => {
             
             return {
                 name: item,
-                path: path.relative(__dirname, itemPath),
+                // For files, just use the filename (not full path)
+                // For directories, use the relative path
+                path: stats.isDirectory() ? path.relative(__dirname, itemPath) : item,
+                fullPath: path.relative(__dirname, itemPath), // Keep full path for reference
                 type: stats.isDirectory() ? 'directory' : 'file',
                 size: stats.size,
                 isAudio: item.toLowerCase().endsWith('.mp3')
             };
         });
         
+        console.log(`\n📁 Browsing: ${browsePath}`);
+        items.forEach(item => {
+            console.log(`  ${item.type === 'directory' ? '📁' : '📄'} ${item.name} -> ${item.path}`);
+        });
+        
         res.json(items.filter(item => item.type === 'directory' || item.isAudio));
     } catch (error) {
+        console.error('Browse error:', error);
         res.status(500).json({ error: 'Unable to browse directory' });
     }
 });

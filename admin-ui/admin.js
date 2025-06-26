@@ -196,8 +196,14 @@ function displayFileBrowser(files) {
     
     browserDiv.innerHTML = files.map(file => `
         <div class="file-item">
-            <input type="checkbox" id="file-${file.name}" value="${file.path}">
-            <label for="file-${file.name}">${file.type === 'directory' ? '📁' : '📄'} ${file.name}</label>
+            ${file.type === 'file' ? 
+                `<input type="checkbox" id="file-${file.name}" value="${file.path}" data-filename="${file.name}">` :
+                ''
+            }
+            <label for="file-${file.name}" ${file.type === 'directory' ? 'style="cursor: pointer;" onclick="browseDirectory(\'' + file.path + '\')"' : ''}>
+                ${file.type === 'directory' ? '📁' : '📄'} ${file.name}
+                ${file.type === 'directory' ? ' (click to browse)' : ''}
+            </label>
         </div>
     `).join('');
 }
@@ -341,7 +347,14 @@ function setupFormHandlers() {
 // Utility Functions
 function getSelectedFiles() {
     const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+    // Use the filename (data-filename) instead of the full path (value)
+    return Array.from(checkboxes).map(cb => cb.dataset.filename || cb.value);
+}
+
+// Function to browse into directories
+async function browseDirectory(dirPath) {
+    document.getElementById('browse-path').value = dirPath;
+    await browseFiles();
 }
 
 async function checkServerStatus() {
