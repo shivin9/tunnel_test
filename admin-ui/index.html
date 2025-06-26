@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Server Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: auto;
+        }
+
+        .schedule-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .schedule-item.active {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .schedule-item.inactive {
+            border-color: #f56565;
+            background: #fff5f5;
+        }
+
+        .time-slot {
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #667eea;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #48bb78;
+        }
+
+        .status-offline {
+            background-color: #f56565;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Audio Server Admin Panel</h1>
+            <p>Manage your audio collections and schedules</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="showTab('collections')">Collections</button>
+            <button class="tab" onclick="showTab('schedules')">Schedules</button>
+            <button class="tab" onclick="showTab('settings')">Settings</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Dashboard</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Server Status</h3>
+                    <p>
+                        <span id="server-status" class="status-indicator status-offline"></span>
+                        <span id="server-status-text">Checking...</span>
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3>Active Schedules</h3>
+                    <p id="active-schedules-count">Loading...</p>
+                </div>
+                
+                <div class="card">
+                    <h3>Current Time</h3>
+                    <p id="current-time">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Currently Available Files</h3>
+                <div id="current-files">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Collections Tab -->
+        <div id="collections" class="tab-content">
+            <h2>Audio Collections</h2>
+            
+            <div class="card">
+                <h3>Create New Collection</h3>
+                <form id="collection-form">
+                    <div class="form-group">
+                        <label for="collection-name">Collection Name</label>
+                        <input type="text" id="collection-name" placeholder="Enter collection name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="collection-path">Folder Path</label>
+                        <input type="text" id="collection-path" placeholder="./collections/my-collection" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Create Collection</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Existing Collections</h3>
+                <div id="collections-list">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h3>Browse and Select Files</h3>
+                <div class="form-group">
+                    <label for="browse-path">Browse Path</label>
+                    <input type="text" id="browse-path" placeholder="./collections" value="./collections">
+                    <button type="button" class="btn btn-primary" onclick="browseFiles()">Browse</button>
+                </div>
+                
+                <div id="file-browser" class="file-list">
+                    <p>Click "Browse" to see available files</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedules Tab -->
+        <div id="schedules" class="tab-content">
+            <h2>Audio Schedules</h2>
+            
+            <div class="card">
+                <h3>Create New Schedule</h3>
+                <form id="schedule-form">
+                    <div class="form-group">
+                        <label for="schedule-name">Schedule Name</label>
+                        <input type="text" id="schedule-name" placeholder="Enter schedule name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="schedule-collection">Collection</label>
+                        <select id="schedule-collection" required>
+                            <option value="">Select a collection</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="schedule-days">Days of Week</label>
+                        <select id="schedule-days">
+                            <option value="*">Every Day</option>
+                            <option value="1,2,3,4,5">Weekdays</option>
+                            <option value="6,0">Weekends</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="schedule-start-time">Start Time</label>
+                            <input type="time" id="schedule-start-time" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="schedule-end-time">End Time</label>
+                            <input type="time" id="schedule-end-time" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="schedule-start-date">Start Date (Optional)</label>
+                            <input type="date" id="schedule-start-date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="schedule-end-date">End Date (Optional)</label>
+                            <input type="date" id="schedule-end-date">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Create Schedule</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Existing Schedules</h3>
+                <div id="schedules-list">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <h2>Settings</h2>
+            
+            <div class="card">
+                <h3>General Settings</h3>
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label for="timezone">Timezone</label>
+                        <select id="timezone">
+                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/Chicago">Central Time</option>
+                            <option value="America/Denver">Mountain Time</option>
+                            <option value="America/Los_Angeles">Pacific Time</option>
+                            <option value="UTC">UTC</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="admin-password">Admin Password</label>
+                        <input type="password" id="admin-password" placeholder="Enter new password">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>System Actions</h3>
+                <button type="button" class="btn btn-success" onclick="exportConfig()">Export Configuration</button>
+                <button type="button" class="btn btn-danger" onclick="resetConfig()">Reset to Defaults</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

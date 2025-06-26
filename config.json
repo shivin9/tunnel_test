@@ -4,7 +4,9 @@
     "adminPassword": "admin123",
     "defaultCollectionPath": "./collections"
   },
-  "activeSchedules": [],
+  "activeSchedules": [
+    "test_schedule"
+  ],
   "collections": {
     "sample": {
       "name": "Sample Audio Collection",
@@ -13,19 +15,44 @@
         "74. Elements of Akarma 1 (29.11.20).mp3",
         "Hare Krsna Kirtana.mp3"
       ]
+    },
+    "mausa_ji": {
+      "name": "Mausa Ji",
+      "path": "./audio",
+      "files": [
+        "74. Elements of Akarma 1 (29.11.20).mp3"
+      ]
     }
   },
   "schedules": {
-    "sample_schedule": {
-      "name": "Sample Schedule",
+    "mausa_ji_schedule": {
+      "name": "Mausa Ji schedule",
       "collection": "sample",
-      "enabled": false,
+      "enabled": true,
       "timeSlots": [
         {
           "id": "slot1",
           "dayOfWeek": "*",
-          "startTime": "09:00",
-          "endTime": "17:00",
+          "startTime": "17:45",
+          "endTime": "18:30",
+          "timezone": "America/New_York"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    },
+    "test_schedule": {
+      "name": "Always Active Test Schedule",
+      "collection": "mausa_ji",
+      "enabled": true,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "*",
+          "startTime": "00:00",
+          "endTime": "23:59",
           "timezone": "America/New_York"
         }
       ],
