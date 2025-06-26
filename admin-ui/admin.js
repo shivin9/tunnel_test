@@ -234,7 +234,7 @@ function displaySchedules(schedules) {
             <div class="time-slot">
                 <strong>Time Slots:</strong><br>
                 ${schedule.timeSlots.map(slot => 
-                    `${slot.dayOfWeek === '*' ? 'Every day' : `Day ${slot.dayOfWeek}`}: ${slot.startTime} - ${slot.endTime}`
+                    `${formatDaysOfWeek(slot.dayOfWeek)}: ${slot.startTime} - ${slot.endTime}`
                 ).join('<br>')}
             </div>
             <button class="btn btn-primary" onclick="editSchedule('${id}')">Edit</button>
@@ -243,6 +243,32 @@ function displaySchedules(schedules) {
             <button class="btn btn-danger" onclick="deleteSchedule('${id}')">Delete</button>
         </div>
     `).join('');
+}
+
+function formatDaysOfWeek(dayOfWeek) {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    if (dayOfWeek === '*') {
+        return 'Every day';
+    }
+    
+    const days = dayOfWeek.split(',').map(d => parseInt(d.trim()));
+    
+    // Check for common patterns
+    if (days.length === 5 && days.every(d => d >= 1 && d <= 5)) {
+        return 'Weekdays (Mon-Fri)';
+    }
+    
+    if (days.length === 2 && days.includes(0) && days.includes(6)) {
+        return 'Weekends (Sat-Sun)';
+    }
+    
+    // Custom selection
+    if (days.length === 1) {
+        return dayNames[days[0]];
+    }
+    
+    return days.map(d => dayNames[d]).join(', ');
 }
 
 // Form Handlers
@@ -287,13 +313,15 @@ function setupFormHandlers() {
     document.getElementById('schedule-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        const selectedDays = getSelectedDays();
+        
         const formData = {
             name: document.getElementById('schedule-name').value,
             collection: document.getElementById('schedule-collection').value,
             enabled: true,
             timeSlots: [{
                 id: 'slot1',
-                dayOfWeek: document.getElementById('schedule-days').value,
+                dayOfWeek: selectedDays,
                 startTime: document.getElementById('schedule-start-time').value,
                 endTime: document.getElementById('schedule-end-time').value,
                 timezone: config.settings?.timezone || 'Asia/Kolkata'
@@ -355,6 +383,63 @@ function getSelectedFiles() {
 async function browseDirectory(dirPath) {
     document.getElementById('browse-path').value = dirPath;
     await browseFiles();
+}
+
+// Day selection helper functions
+function getSelectedDays() {
+    const checkboxes = document.querySelectorAll('.day-checkbox input[type="checkbox"]:checked');
+    const selectedDays = Array.from(checkboxes).map(cb => cb.value);
+    
+    // If all days are selected, return "*"
+    if (selectedDays.length === 7) {
+        return '*';
+    }
+    
+    // Return comma-separated string of day numbers
+    return selectedDays.sort((a, b) => parseInt(a) - parseInt(b)).join(',');
+}
+
+function setSelectedDays(dayOfWeek) {
+    // Clear all checkboxes first
+    clearAllDays();
+    
+    if (dayOfWeek === '*') {
+        // Select all days
+        selectAllDays();
+    } else {
+        // Select specific days
+        const days = dayOfWeek.split(',');
+        days.forEach(day => {
+            const checkbox = document.getElementById(`day-${day.trim()}`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+    }
+}
+
+function selectAllDays() {
+    const checkboxes = document.querySelectorAll('.day-checkbox input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+function selectWeekdays() {
+    clearAllDays();
+    [1, 2, 3, 4, 5].forEach(day => {
+        document.getElementById(`day-${day}`).checked = true;
+    });
+}
+
+function selectWeekends() {
+    clearAllDays();
+    [0, 6].forEach(day => {
+        document.getElementById(`day-${day}`).checked = true;
+    });
+}
+
+function clearAllDays() {
+    const checkboxes = document.querySelectorAll('.day-checkbox input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
 }
 
 async function checkServerStatus() {
@@ -430,7 +515,7 @@ async function editSchedule(scheduleId) {
         // Populate form with existing data
         document.getElementById('schedule-name').value = schedule.name;
         document.getElementById('schedule-collection').value = schedule.collection;
-        document.getElementById('schedule-days').value = schedule.timeSlots[0]?.dayOfWeek || '*';
+        setSelectedDays(schedule.timeSlots[0]?.dayOfWeek || '*');
         document.getElementById('schedule-start-time').value = schedule.timeSlots[0]?.startTime || '';
         document.getElementById('schedule-end-time').value = schedule.timeSlots[0]?.endTime || '';
         document.getElementById('schedule-start-date').value = schedule.dateRange?.startDate || '';
@@ -475,6 +560,9 @@ function cancelEditSchedule() {
     // Reset form
     form.reset();
     delete form.dataset.editingId;
+    
+    // Clear day checkboxes
+    clearAllDays();
     
     // Reset button
     submitButton.textContent = 'Create Schedule';

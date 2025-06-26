@@ -244,6 +244,54 @@
             padding: 20px;
             color: #667eea;
         }
+
+        .days-checkbox-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .day-checkbox input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            transform: scale(1.2);
+        }
+
+        .day-checkbox label {
+            margin: 0;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .quick-select-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            background: #e2e8f0;
+            color: #4a5568;
+            border: 1px solid #cbd5e0;
+        }
+
+        .btn-small:hover {
+            background: #cbd5e0;
+        }
     </style>
 </head>
 <body>
@@ -350,19 +398,43 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="schedule-days">Days of Week</label>
-                        <select id="schedule-days">
-                            <option value="*">Every Day</option>
-                            <option value="1,2,3,4,5">Weekdays</option>
-                            <option value="6,0">Weekends</option>
-                            <option value="1">Monday</option>
-                            <option value="2">Tuesday</option>
-                            <option value="3">Wednesday</option>
-                            <option value="4">Thursday</option>
-                            <option value="5">Friday</option>
-                            <option value="6">Saturday</option>
-                            <option value="0">Sunday</option>
-                        </select>
+                        <label>Days of Week</label>
+                        <div class="days-checkbox-container">
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-0" value="0">
+                                <label for="day-0">Sunday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-1" value="1">
+                                <label for="day-1">Monday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-2" value="2">
+                                <label for="day-2">Tuesday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-3" value="3">
+                                <label for="day-3">Wednesday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-4" value="4">
+                                <label for="day-4">Thursday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-5" value="5">
+                                <label for="day-5">Friday</label>
+                            </div>
+                            <div class="day-checkbox">
+                                <input type="checkbox" id="day-6" value="6">
+                                <label for="day-6">Saturday</label>
+                            </div>
+                        </div>
+                        <div class="quick-select-buttons">
+                            <button type="button" class="btn btn-small" onclick="selectAllDays()">All Days</button>
+                            <button type="button" class="btn btn-small" onclick="selectWeekdays()">Weekdays</button>
+                            <button type="button" class="btn btn-small" onclick="selectWeekends()">Weekends</button>
+                            <button type="button" class="btn btn-small" onclick="clearAllDays()">Clear All</button>
+                        </div>
                     </div>
                     
                     <div class="grid">

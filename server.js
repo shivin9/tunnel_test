@@ -252,6 +252,13 @@ app.post('/admin/schedules', (req, res) => {
     const schedule = req.body;
     const id = schedule.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
+    // Ensure schedule uses the system timezone
+    if (schedule.timeSlots) {
+        schedule.timeSlots.forEach(slot => {
+            slot.timezone = config.settings.timezone || 'Asia/Kolkata';
+        });
+    }
+    
     config.schedules[id] = schedule;
     saveConfig();
     res.json({ success: true, id });
@@ -263,6 +270,13 @@ app.put('/admin/schedules/:id', (req, res) => {
     
     if (!config.schedules[id]) {
         return res.status(404).json({ error: 'Schedule not found' });
+    }
+    
+    // Ensure schedule uses the system timezone
+    if (schedule.timeSlots) {
+        schedule.timeSlots.forEach(slot => {
+            slot.timezone = config.settings.timezone || 'Asia/Kolkata';
+        });
     }
     
     config.schedules[id] = schedule;
@@ -322,7 +336,26 @@ app.get('/admin/browse', (req, res) => {
 });
 
 app.post('/admin/settings', (req, res) => {
+    const oldTimezone = config.settings.timezone;
     config.settings = { ...config.settings, ...req.body };
+    
+    // If timezone changed, update all existing schedules
+    if (req.body.timezone && req.body.timezone !== oldTimezone) {
+        console.log(`\n🕒 Timezone changed from ${oldTimezone} to ${req.body.timezone}`);
+        console.log('Updating all existing schedules...');
+        
+        Object.entries(config.schedules).forEach(([scheduleId, schedule]) => {
+            if (schedule.timeSlots) {
+                schedule.timeSlots.forEach(slot => {
+                    console.log(`  Updated ${scheduleId}: ${slot.timezone} -> ${req.body.timezone}`);
+                    slot.timezone = req.body.timezone;
+                });
+            }
+        });
+        
+        console.log('All schedules updated to use new timezone\n');
+    }
+    
     saveConfig();
     res.json({ success: true });
 });
@@ -555,7 +588,7 @@ app.get('/', (req, res) => {
     <a href="/admin" class="admin-link">⚙️ Admin</a>
     
     <div class="container">
-        <h1>🎵 Scheduled Audio Server</h1>
+        <h1>Audio Server</h1>
         
         <div class="status">
             ${activeFiles.length > 0 

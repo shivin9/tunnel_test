@@ -5,43 +5,48 @@
     "defaultCollectionPath": "./collections"
   },
   "activeSchedules": [
-    "test_schedule"
+    "geetika_didi_schedule"
   ],
   "collections": {
     "sample": {
       "name": "Sample Audio Collection",
       "path": "./audio",
       "files": [
-        "74. Elements of Akarma 1 (29.11.20).mp3",
+        "76. Elements of Akarma 2 (01.12.20).mp3",
+        "77. The four types of karma phala (02.12.20).mp3",
         "Hare Krsna Kirtana.mp3"
       ]
     },
     "mausa_ji": {
       "name": "Mausa Ji",
-      "path": "./collections",
+      "path": "./audio",
       "files": [
-        "74. Elements of Akarma 1 (29.11.20).mp3",
-        "75. Bhoga offering (30.11.20).mp3",
-        "76. Elements of Akarma 2 (01.12.20).mp3",
-        "77. The four types of karma phala (02.12.20).mp3",
-        "78. Krsna is pleased when we chant His Holy name (03.12.20).mp3",
         "79. Hari nama sankirtana (04.12.20).mp3",
-        "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3"
+        "Hare Krsna Kirtana.mp3"
+      ]
+    },
+    "geetika_didi_collection": {
+      "name": "Geetika Didi Collection",
+      "path": "./audio",
+      "files": [
+        "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3",
+        "81. Q&A on Karma topic (06.12.20).mp3",
+        "Hare Krsna Kirtana.mp3"
       ]
     }
   },
   "schedules": {
-    "mausa_ji_schedule": {
-      "name": "Mausa Ji schedule",
+    "test_schedule": {
+      "name": "Always Active Test Schedule",
       "collection": "sample",
-      "enabled": true,
+      "enabled": false,
       "timeSlots": [
         {
           "id": "slot1",
           "dayOfWeek": "*",
           "startTime": "14:20",
-          "endTime": "15:15",
-          "timezone": "America/New_York"
+          "endTime": "15:30",
+          "timezone": "Asia/Kolkata"
         }
       ],
       "dateRange": {
@@ -49,16 +54,34 @@
         "endDate": null
       }
     },
-    "test_schedule": {
-      "name": "Always Active Test Schedule",
-      "collection": "mausa_ji",
+    "shivin_mausa_ji_schedule": {
+      "name": "Shivin Mausa ji schedule",
+      "collection": "sample",
       "enabled": true,
       "timeSlots": [
         {
           "id": "slot1",
           "dayOfWeek": "*",
-          "startTime": "00:00",
-          "endTime": "23:59",
+          "startTime": "17:45",
+          "endTime": "18:45",
+          "timezone": "Asia/Kolkata"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    },
+    "geetika_didi_schedule": {
+      "name": "Geetika Didi schedule",
+      "collection": "geetika_didi_collection",
+      "enabled": true,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "1,2,3,4,5",
+          "startTime": "16:00",
+          "endTime": "17:00",
           "timezone": "Asia/Kolkata"
         }
       ],
