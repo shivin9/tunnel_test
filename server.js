@@ -60,8 +60,108 @@ app.get('/*.mp3', (req, res) => {
     }
 });
 
-// List available audio files
+// Serve HTML audio player interface
 app.get('/', (req, res) => {
+    try {
+        const files = fs.readdirSync(AUDIO_DIR)
+            .filter(file => file.endsWith('.mp3'));
+        
+        const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Audio Server</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .audio-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+            transition: transform 0.2s ease;
+        }
+        
+        .audio-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .audio-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #718096;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Local Audio Server</h1>
+        
+        ${files.map(file => `
+        <div class="audio-item">
+            <div class="audio-title">${file}</div>
+            <audio controls preload="metadata" controlslist="nodownload">
+                <source src="/${encodeURIComponent(file)}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+        `).join('')}
+        
+        <div class="footer">
+            <p>Served from local machine via pktriot</p>
+        </div>
+    </div>
+</body>
+</html>`;
+        
+        res.send(html);
+    } catch (error) {
+        res.status(500).send('Unable to read audio directory');
+    }
+});
+
+// API endpoint for JSON data
+app.get('/api/files', (req, res) => {
     try {
         const files = fs.readdirSync(AUDIO_DIR)
             .filter(file => file.endsWith('.mp3'))

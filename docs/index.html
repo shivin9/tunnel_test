@@ -30,6 +30,23 @@
             font-size: 2.5em;
         }
         
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.2em;
+            padding: 40px;
+        }
+        
+        .error {
+            text-align: center;
+            color: #e53e3e;
+            font-size: 1.1em;
+            padding: 20px;
+            background: #fed7d7;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
         .audio-item {
             background: #f8f9fa;
             border-radius: 10px;
@@ -56,12 +73,27 @@
             margin-top: 10px;
         }
         
-        
         .footer {
             text-align: center;
             margin-top: 40px;
             color: #718096;
             font-size: 0.9em;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background-color: #48bb78;
+        }
+        
+        .status-offline {
+            background-color: #f56565;
         }
     </style>
 </head>
@@ -69,25 +101,98 @@
     <div class="container">
         <h1>🎵 Audio Collection</h1>
         
-        <div class="audio-item">
-            <div class="audio-title">74. Elements of Akarma 1 (29.11.20)</div>
-            <audio controls preload="metadata" controlslist="nodownload">
-                <source src="https://sleepy-thunder-45656.pktriot.net/74. Elements of Akarma 1 (29.11.20).mp3" type="audio/mpeg">
-                Your browser does not support the audio element.
-            </audio>
+        <div id="loading" class="loading">
+            Loading audio files...
         </div>
         
-        <div class="audio-item">
-            <div class="audio-title">Hare Krsna Kirtana</div>
-            <audio controls preload="metadata" controlslist="nodownload">
-                <source src="https://sleepy-thunder-45656.pktriot.net/Hare Krsna Kirtana.mp3" type="audio/mpeg">
-                Your browser does not support the audio element.
-            </audio>
+        <div id="audio-container">
+            <!-- Audio players will be dynamically loaded here -->
         </div>
         
         <div class="footer">
-            <p>Hosted on GitHub Pages</p>
+            <p>
+                <span id="status-indicator" class="status-indicator status-offline"></span>
+                <span id="status-text">Connecting to local server...</span>
+            </p>
+            <p>Hosted on GitHub Pages • Audio served from local machine</p>
         </div>
     </div>
+
+    <script>
+        const SERVER_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        
+        async function loadAudioFiles() {
+            const loadingDiv = document.getElementById('loading');
+            const audioContainer = document.getElementById('audio-container');
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            try {
+                // Fetch audio file list from your local server
+                const response = await fetch(`${SERVER_URL}/api/files`);
+                
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update status to online
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Connected to local server';
+                
+                // Hide loading message
+                loadingDiv.style.display = 'none';
+                
+                // Create audio players for each file
+                if (data.audioFiles && data.audioFiles.length > 0) {
+                    data.audioFiles.forEach(file => {
+                        const audioItem = document.createElement('div');
+                        audioItem.className = 'audio-item';
+                        
+                        audioItem.innerHTML = `
+                            <div class="audio-title">${file.name}</div>
+                            <audio controls preload="metadata" controlslist="nodownload">
+                                <source src="${SERVER_URL}${file.url}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                        `;
+                        
+                        audioContainer.appendChild(audioItem);
+                    });
+                } else {
+                    audioContainer.innerHTML = '<div class="error">No audio files found on the server.</div>';
+                }
+                
+            } catch (error) {
+                console.error('Failed to load audio files:', error);
+                
+                // Update status to offline
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Server offline or unreachable';
+                
+                // Hide loading and show error
+                loadingDiv.style.display = 'none';
+                audioContainer.innerHTML = `
+                    <div class="error">
+                        Unable to connect to the local audio server. 
+                        <br>Please make sure the Node.js server is running on your local machine.
+                        <br><small>Error: ${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load audio files when page loads
+        document.addEventListener('DOMContentLoaded', loadAudioFiles);
+        
+        // Retry connection every 30 seconds if offline
+        setInterval(() => {
+            const statusIndicator = document.getElementById('status-indicator');
+            if (statusIndicator.classList.contains('status-offline')) {
+                loadAudioFiles();
+            }
+        }, 30000);
+    </script>
 </body>
 </html>
