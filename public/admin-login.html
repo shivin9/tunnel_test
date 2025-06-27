@@ -68,7 +68,6 @@
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-size: 1em;
-            transition: border-color 0.3s ease;
             background: white;
             z-index: 10;
             position: relative;
@@ -202,21 +201,29 @@
     </div>
 
     <script>
-        // Force show form after 2 seconds if nothing else works
-        setTimeout(() => {
-            const form = document.getElementById('admin-login-form');
-            const loading = document.getElementById('loading');
-            if (form && form.style.display === 'none') {
-                console.log('Force showing form after timeout');
-                form.style.display = 'block';
-                if (loading) loading.style.display = 'none';
-            }
-        }, 2000);
+        console.log('Admin login page loaded');
         
+        // Focus on password field immediately
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            const passwordField = document.getElementById('admin-password');
+            if (passwordField) {
+                passwordField.focus();
+                console.log('Password field focused');
+            }
+        });
+
         document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('Form submitted');
             
             const password = document.getElementById('admin-password').value;
+            console.log('Password length:', password.length);
+            
+            if (!password) {
+                showAlert('Please enter a password', 'error');
+                return;
+            }
             
             showLoading(true);
             
@@ -232,19 +239,16 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showAlert('Authentication successful! Redirecting...', 'success');
-                    // Store admin session
-                    localStorage.setItem('adminAuthenticated', 'true');
-                    localStorage.setItem('adminAuthTime', new Date().getTime().toString());
-                    
+                    showAlert('Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = '/admin/';
                     }, 1000);
                 } else {
-                    showAlert(result.error || 'Authentication failed', 'error');
+                    showAlert(result.error || 'Login failed', 'error');
                 }
             } catch (error) {
-                showAlert('Authentication failed. Please try again.', 'error');
+                console.error('Login error:', error);
+                showAlert('Login failed. Please try again.', 'error');
             }
             
             showLoading(false);
@@ -264,85 +268,6 @@
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
             document.getElementById('admin-login-form').style.display = show ? 'none' : 'block';
-        }
-
-        // Prevent infinite loading/redirect loops
-        let redirectAttempted = false;
-        
-        // Check if already authenticated
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Admin login page loaded');
-            
-            try {
-                // Prevent multiple executions
-                if (redirectAttempted) {
-                    console.log('Redirect already attempted, skipping auth check');
-                    showForm();
-                    return;
-                }
-                
-                const isAuthenticated = localStorage.getItem('adminAuthenticated');
-                const authTime = localStorage.getItem('adminAuthTime');
-                
-                console.log('Auth check - authenticated:', isAuthenticated, 'authTime:', authTime);
-                
-                // Check if authentication is still valid (24 hours)
-                if (isAuthenticated === 'true' && authTime) {
-                    const now = new Date().getTime();
-                    const authTimestamp = parseInt(authTime);
-                    const hoursPassed = (now - authTimestamp) / (1000 * 60 * 60);
-                    
-                    console.log('Hours since auth:', hoursPassed);
-                    
-                    if (hoursPassed < 24 && !isNaN(hoursPassed)) {
-                        // Still authenticated, redirect to admin panel
-                        console.log('Valid authentication found, redirecting...');
-                        redirectAttempted = true;
-                        
-                        // Use a timeout to prevent blocking
-                        setTimeout(() => {
-                            window.location.href = '/admin/';
-                        }, 500);
-                        return;
-                    }
-                }
-                
-                // Clear expired or invalid authentication
-                localStorage.removeItem('adminAuthenticated');
-                localStorage.removeItem('adminAuthTime');
-                console.log('Authentication cleared or not found');
-                
-                showForm();
-                
-            } catch (error) {
-                console.error('Error in auth check:', error);
-                showForm();
-            }
-        });
-        
-        function showForm() {
-            // Ensure form is visible and input is focusable
-            const form = document.getElementById('admin-login-form');
-            const loading = document.getElementById('loading');
-            
-            if (form) form.style.display = 'block';
-            if (loading) loading.style.display = 'none';
-            
-            // Focus on password field
-            setTimeout(() => {
-                const passwordField = document.getElementById('admin-password');
-                console.log('Password field found:', !!passwordField);
-                
-                if (passwordField) {
-                    passwordField.focus();
-                    console.log('Password field focused');
-                    
-                    // Test input functionality
-                    passwordField.addEventListener('input', (e) => {
-                        console.log('Input working, length:', e.target.value.length);
-                    });
-                }
-            }, 200);
         }
     </script>
 </body>

@@ -30,7 +30,8 @@
     ]
   },
   "activeSchedules": [
-    "test_schedule"
+    "test_schedule",
+    "himanshi_didi_schedule"
   ],
   "collections": {
     "sample": {
@@ -46,7 +47,12 @@
       "name": "Mausa Ji",
       "path": "./audio",
       "files": [
+        "76. Elements of Akarma 2 (01.12.20).mp3",
+        "77. The four types of karma phala (02.12.20).mp3",
+        "78. Krsna is pleased when we chant His Holy name (03.12.20).mp3",
         "79. Hari nama sankirtana (04.12.20).mp3",
+        "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3",
+        "81. Q&A on Karma topic (06.12.20).mp3",
         "Hare Krsna Kirtana.mp3"
       ]
     },
