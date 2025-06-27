@@ -587,10 +587,27 @@ app.delete('/admin/schedules/:id', authenticateAdmin, (req, res) => {
 });
 
 app.get('/admin/browse', authenticateAdmin, (req, res) => {
-    const browsePath = req.query.path || './collections';
-    const fullPath = path.resolve(__dirname, browsePath);
+    let browsePath = req.query.path || './collections';
+    
+    // Handle absolute vs relative paths
+    let fullPath;
+    if (path.isAbsolute(browsePath)) {
+        fullPath = browsePath;
+    } else {
+        fullPath = path.resolve(__dirname, browsePath);
+    }
     
     try {
+        // Security check: ensure path exists and is readable
+        if (!fs.existsSync(fullPath)) {
+            return res.status(404).json({ error: 'Directory not found' });
+        }
+        
+        const stats = fs.statSync(fullPath);
+        if (!stats.isDirectory()) {
+            return res.status(400).json({ error: 'Path is not a directory' });
+        }
+        
         const items = fs.readdirSync(fullPath).map(item => {
             const itemPath = path.join(fullPath, item);
             const stats = fs.statSync(itemPath);
@@ -598,24 +615,46 @@ app.get('/admin/browse', authenticateAdmin, (req, res) => {
             return {
                 name: item,
                 // For files, just use the filename (not full path)
-                // For directories, use the relative path
-                path: stats.isDirectory() ? path.relative(__dirname, itemPath) : item,
-                fullPath: path.relative(__dirname, itemPath), // Keep full path for reference
+                // For directories, use the absolute path
+                path: stats.isDirectory() ? itemPath : item,
+                fullPath: itemPath, // Always store absolute path
+                relativePath: path.relative(__dirname, itemPath), // Keep relative for backwards compatibility
                 type: stats.isDirectory() ? 'directory' : 'file',
                 size: stats.size,
-                isAudio: item.toLowerCase().endsWith('.mp3')
+                isAudio: stats.isFile() && (
+                    item.toLowerCase().endsWith('.mp3') || 
+                    item.toLowerCase().endsWith('.wav') || 
+                    item.toLowerCase().endsWith('.m4a') || 
+                    item.toLowerCase().endsWith('.aac')
+                )
             };
         });
         
-        console.log(`\n📁 Browsing: ${browsePath}`);
+        console.log(`\n📁 Browsing: ${fullPath}`);
         items.forEach(item => {
             console.log(`  ${item.type === 'directory' ? '📁' : '📄'} ${item.name} -> ${item.path}`);
         });
         
-        res.json(items.filter(item => item.type === 'directory' || item.isAudio));
+        // Add parent directory navigation (except for root directory)
+        const parentDir = path.dirname(fullPath);
+        if (parentDir !== fullPath) {
+            items.unshift({
+                name: '..',
+                path: parentDir,
+                fullPath: parentDir,
+                type: 'directory',
+                size: 0,
+                isAudio: false
+            });
+        }
+        
+        res.json({
+            currentPath: fullPath,
+            items: items.filter(item => item.type === 'directory' || item.isAudio)
+        });
     } catch (error) {
         console.error('Browse error:', error);
-        res.status(500).json({ error: 'Unable to browse directory' });
+        res.status(500).json({ error: 'Unable to browse directory: ' + error.message });
     }
 });
 
@@ -705,8 +744,8 @@ app.post('/admin/reset', authenticateAdmin, (req, res) => {
     res.json({ success: true });
 });
 
-// Audio file serving with schedule checking
-app.get('/*.mp3', (req, res) => {
+// Audio file serving with schedule checking (supports multiple formats)
+app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     const filename = decodeURIComponent(req.path.substring(1));
     console.log(`\n🎵 Audio request for: ${filename}`);
     
@@ -735,7 +774,14 @@ app.get('/*.mp3', (req, res) => {
         console.log(`    Files: ${collection.files?.join(', ') || 'none'}`);
         
         if (collection.files && collection.files.includes(filename)) {
-            const potentialPath = path.join(__dirname, collection.path, filename);
+            // Handle both absolute and relative paths
+            let potentialPath;
+            if (path.isAbsolute(collection.path)) {
+                potentialPath = path.join(collection.path, filename);
+            } else {
+                potentialPath = path.join(__dirname, collection.path, filename);
+            }
+            
             console.log(`    Potential path: ${potentialPath}`);
             console.log(`    File exists: ${fs.existsSync(potentialPath)}`);
             
@@ -757,9 +803,28 @@ app.get('/*.mp3', (req, res) => {
     const fileSize = stat.size;
     const range = req.headers.range;
     
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'audio/mpeg'; // default
+    
+    switch (ext) {
+        case '.mp3':
+            contentType = 'audio/mpeg';
+            break;
+        case '.wav':
+            contentType = 'audio/wav';
+            break;
+        case '.m4a':
+            contentType = 'audio/mp4';
+            break;
+        case '.aac':
+            contentType = 'audio/aac';
+            break;
+    }
+    
     // Set content type and headers
     res.set({
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': contentType,
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'no-cache'
     });

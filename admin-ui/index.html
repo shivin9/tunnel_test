@@ -376,12 +376,22 @@
                 <h3>Browse and Select Files</h3>
                 <div class="form-group">
                     <label for="browse-path">Browse Path</label>
-                    <input type="text" id="browse-path" placeholder="./collections" value="./collections">
-                    <button type="button" class="btn btn-primary" onclick="browseFiles()">Browse</button>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <input type="text" id="browse-path" placeholder="/path/to/audio/files" value="./collections" style="flex: 1;">
+                        <button type="button" class="btn btn-primary" onclick="browseFiles()">Browse</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button type="button" class="btn btn-small" onclick="setPath('./')">Project Root</button>
+                        <button type="button" class="btn btn-small" onclick="setPath('./collections')">Collections</button>
+                        <button type="button" class="btn btn-small" onclick="setPath('./audio')">Audio Folder</button>
+                        <button type="button" class="btn btn-small" onclick="setPath('/Users')">Users (Mac)</button>
+                        <button type="button" class="btn btn-small" onclick="setPath('/home')">Home (Linux)</button>
+                        <button type="button" class="btn btn-small" onclick="setPath('C:\\')">C:\ (Windows)</button>
+                    </div>
                 </div>
                 
                 <div id="file-browser" class="file-list">
-                    <p>Click "Browse" to see available files</p>
+                    <p>Click "Browse" to see available files or use quick access buttons above</p>
                 </div>
             </div>
         </div>

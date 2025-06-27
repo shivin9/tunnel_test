@@ -183,33 +183,94 @@ async function loadCollectionsForSchedule() {
 async function browseFiles() {
     const path = document.getElementById('browse-path').value;
     try {
-        const files = await apiCall(`/admin/browse?path=${encodeURIComponent(path)}`);
-        displayFileBrowser(files);
+        const response = await apiCall(`/admin/browse?path=${encodeURIComponent(path)}`);
+        displayFileBrowser(response);
     } catch (error) {
-        document.getElementById('file-browser').innerHTML = '<p>Error browsing files</p>';
+        document.getElementById('file-browser').innerHTML = '<p>Error browsing files: ' + error.message + '</p>';
     }
 }
 
-function displayFileBrowser(files) {
+function displayFileBrowser(response) {
     const browserDiv = document.getElementById('file-browser');
+    const pathInput = document.getElementById('browse-path');
+    
+    // Handle new response format with currentPath and items
+    const files = response.items || response;
+    const currentPath = response.currentPath;
+    
+    // Update the path input with current path
+    if (currentPath) {
+        pathInput.value = currentPath;
+    }
     
     if (!files || files.length === 0) {
         browserDiv.innerHTML = '<p>No files found in this directory</p>';
         return;
     }
     
-    browserDiv.innerHTML = files.map(file => `
+    // Add current path display and file selection controls
+    const audioFiles = files.filter(f => f.type === 'file');
+    const hasAudioFiles = audioFiles.length > 0;
+    
+    const pathDisplay = currentPath ? `<div style="background: #e2e8f0; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-family: monospace; font-size: 0.9em;">📁 ${currentPath}</div>` : '';
+    
+    // Get file extensions for selective options
+    const extensions = [...new Set(audioFiles.map(f => f.name.split('.').pop().toLowerCase()))];
+    const extensionButtons = extensions.map(ext => {
+        const count = audioFiles.filter(f => f.name.toLowerCase().endsWith(`.${ext}`)).length;
+        return `<button type="button" class="btn btn-small" onclick="selectFilesByExtension('${ext}')">${ext.toUpperCase()} (${count})</button>`;
+    }).join('');
+    
+    const selectionControls = hasAudioFiles ? `
+        <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                <span style="font-weight: 600; color: #4a5568;">Quick Select:</span>
+                <button type="button" class="btn btn-small" onclick="selectAllAudioFiles()">All Audio Files (${audioFiles.length})</button>
+                <button type="button" class="btn btn-small" onclick="clearAllFileSelections()">Clear All</button>
+            </div>
+            ${extensions.length > 1 ? `
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #4a5568;">By Type:</span>
+                    ${extensionButtons}
+                </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #718096; font-size: 0.9em;" id="selection-count">0 files selected</span>
+                <span style="color: #718096; font-size: 0.8em;">💡 Tip: Use checkboxes or buttons above for quick selection</span>
+            </div>
+        </div>
+    ` : '';
+    
+    browserDiv.innerHTML = pathDisplay + selectionControls + files.map(file => `
         <div class="file-item">
             ${file.type === 'file' ? 
                 `<input type="checkbox" id="file-${file.name}" value="${file.path}" data-filename="${file.name}">` :
                 ''
             }
-            <label for="file-${file.name}" ${file.type === 'directory' ? 'style="cursor: pointer;" onclick="browseDirectory(\'' + file.path + '\')"' : ''}>
+            <label for="file-${file.name}" ${file.type === 'directory' ? 'style="cursor: pointer;" onclick="browseDirectory(\'' + file.path.replace(/'/g, "\\'") + '\')"' : ''}>
                 ${file.type === 'directory' ? '📁' : '📄'} ${file.name}
                 ${file.type === 'directory' ? ' (click to browse)' : ''}
+                ${file.type === 'file' ? ` (${formatFileSize(file.size)})` : ''}
             </label>
         </div>
     `).join('');
+    
+    // Add event listeners to checkboxes for real-time count updates
+    setTimeout(() => {
+        const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectionCount);
+        });
+        updateSelectionCount(); // Initial count
+    }, 50);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 // Schedule Management
@@ -407,6 +468,63 @@ function getSelectedFiles() {
 async function browseDirectory(dirPath) {
     document.getElementById('browse-path').value = dirPath;
     await browseFiles();
+}
+
+// Function to set path and browse
+async function setPath(newPath) {
+    document.getElementById('browse-path').value = newPath;
+    await browseFiles();
+}
+
+// Function to select all audio files in current directory
+function selectAllAudioFiles() {
+    const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectionCount();
+}
+
+// Function to clear all file selections
+function clearAllFileSelections() {
+    const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectionCount();
+}
+
+// Function to select files by extension
+function selectFilesByExtension(extension) {
+    const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        const filename = checkbox.getAttribute('data-filename');
+        if (filename && filename.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) {
+            checkbox.checked = true;
+        }
+    });
+    updateSelectionCount();
+}
+
+// Function to update selection count display
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('#file-browser input[type="checkbox"]');
+    const selectedCount = document.querySelectorAll('#file-browser input[type="checkbox"]:checked').length;
+    const totalCount = checkboxes.length;
+    
+    const countElement = document.getElementById('selection-count');
+    if (countElement) {
+        countElement.textContent = `${selectedCount} of ${totalCount} files selected`;
+        
+        // Add visual feedback
+        if (selectedCount > 0) {
+            countElement.style.color = '#38a169';
+            countElement.style.fontWeight = '600';
+        } else {
+            countElement.style.color = '#718096';
+            countElement.style.fontWeight = 'normal';
+        }
+    }
 }
 
 // Day selection helper functions
@@ -653,7 +771,7 @@ async function editCollection(collectionId) {
         // Pre-select files that are in this collection
         if (collection.files) {
             collection.files.forEach(fileName => {
-                const checkbox = document.querySelector(`#file-browser input[value*="${fileName}"]`);
+                const checkbox = document.querySelector(`#file-browser input[data-filename="${fileName}"]`);
                 if (checkbox) {
                     checkbox.checked = true;
                 }

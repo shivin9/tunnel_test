@@ -69,11 +69,20 @@
             border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s ease;
+            background: white;
+            z-index: 10;
+            position: relative;
         }
 
         .form-group input:focus {
             outline: none;
             border-color: #4a5568;
+            box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+        }
+
+        .form-group input:disabled {
+            background: #f7fafc;
+            cursor: not-allowed;
         }
 
         .btn {
@@ -179,7 +188,8 @@
         <form id="admin-login-form">
             <div class="form-group">
                 <label for="admin-password">Admin Password</label>
-                <input type="password" id="admin-password" required placeholder="Enter admin password">
+                <input type="password" id="admin-password" required placeholder="Enter admin password" autocomplete="current-password">
+                <small style="color: #718096; font-size: 0.8em; margin-top: 5px; display: block;">Click here and type your password</small>
             </div>
 
             <button type="submit" class="btn btn-primary">Access Admin Panel</button>
@@ -192,6 +202,17 @@
     </div>
 
     <script>
+        // Force show form after 2 seconds if nothing else works
+        setTimeout(() => {
+            const form = document.getElementById('admin-login-form');
+            const loading = document.getElementById('loading');
+            if (form && form.style.display === 'none') {
+                console.log('Force showing form after timeout');
+                form.style.display = 'block';
+                if (loading) loading.style.display = 'none';
+            }
+        }, 2000);
+        
         document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -245,28 +266,84 @@
             document.getElementById('admin-login-form').style.display = show ? 'none' : 'block';
         }
 
+        // Prevent infinite loading/redirect loops
+        let redirectAttempted = false;
+        
         // Check if already authenticated
         document.addEventListener('DOMContentLoaded', function() {
-            const isAuthenticated = localStorage.getItem('adminAuthenticated');
-            const authTime = localStorage.getItem('adminAuthTime');
+            console.log('Admin login page loaded');
             
-            // Check if authentication is still valid (24 hours)
-            if (isAuthenticated && authTime) {
-                const now = new Date().getTime();
-                const authTimestamp = parseInt(authTime);
-                const hoursPassed = (now - authTimestamp) / (1000 * 60 * 60);
-                
-                if (hoursPassed < 24) {
-                    // Still authenticated, redirect to admin panel
-                    window.location.href = '/admin/';
+            try {
+                // Prevent multiple executions
+                if (redirectAttempted) {
+                    console.log('Redirect already attempted, skipping auth check');
+                    showForm();
                     return;
                 }
+                
+                const isAuthenticated = localStorage.getItem('adminAuthenticated');
+                const authTime = localStorage.getItem('adminAuthTime');
+                
+                console.log('Auth check - authenticated:', isAuthenticated, 'authTime:', authTime);
+                
+                // Check if authentication is still valid (24 hours)
+                if (isAuthenticated === 'true' && authTime) {
+                    const now = new Date().getTime();
+                    const authTimestamp = parseInt(authTime);
+                    const hoursPassed = (now - authTimestamp) / (1000 * 60 * 60);
+                    
+                    console.log('Hours since auth:', hoursPassed);
+                    
+                    if (hoursPassed < 24 && !isNaN(hoursPassed)) {
+                        // Still authenticated, redirect to admin panel
+                        console.log('Valid authentication found, redirecting...');
+                        redirectAttempted = true;
+                        
+                        // Use a timeout to prevent blocking
+                        setTimeout(() => {
+                            window.location.href = '/admin/';
+                        }, 500);
+                        return;
+                    }
+                }
+                
+                // Clear expired or invalid authentication
+                localStorage.removeItem('adminAuthenticated');
+                localStorage.removeItem('adminAuthTime');
+                console.log('Authentication cleared or not found');
+                
+                showForm();
+                
+            } catch (error) {
+                console.error('Error in auth check:', error);
+                showForm();
             }
-            
-            // Clear expired authentication
-            localStorage.removeItem('adminAuthenticated');
-            localStorage.removeItem('adminAuthTime');
         });
+        
+        function showForm() {
+            // Ensure form is visible and input is focusable
+            const form = document.getElementById('admin-login-form');
+            const loading = document.getElementById('loading');
+            
+            if (form) form.style.display = 'block';
+            if (loading) loading.style.display = 'none';
+            
+            // Focus on password field
+            setTimeout(() => {
+                const passwordField = document.getElementById('admin-password');
+                console.log('Password field found:', !!passwordField);
+                
+                if (passwordField) {
+                    passwordField.focus();
+                    console.log('Password field focused');
+                    
+                    // Test input functionality
+                    passwordField.addEventListener('input', (e) => {
+                        console.log('Input working, length:', e.target.value.length);
+                    });
+                }
+            }, 200);
+        }
     </script>
 </body>
 </html>
