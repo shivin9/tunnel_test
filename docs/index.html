@@ -196,13 +196,13 @@
         </div>
 
         <div class="auth-options">
-            <a href="/login.html" class="auth-card participant-card">
+            <a href="#" class="auth-card participant-card" onclick="window.open(`${SERVER_URL}/login.html`, '_blank')">
                 <div class="auth-card-icon">👥</div>
                 <h3>Participant Login</h3>
                 <p>Access your assigned audio schedules and listen to available content</p>
             </a>
 
-            <a href="/admin-login.html" class="auth-card admin-card">
+            <a href="#" class="auth-card admin-card" onclick="window.open(`${SERVER_URL}/admin-login.html`, '_blank')">
                 <div class="auth-card-icon">⚙️</div>
                 <h3>Admin Panel</h3>
                 <p>Manage collections, schedules, users, and server settings</p>
@@ -212,10 +212,10 @@
         <div class="quick-access">
             <h4>Quick Access</h4>
             <div class="quick-links">
-                <a href="/register.html" class="quick-link">Create Account</a>
+                <a href="#" class="quick-link" onclick="window.open(`${SERVER_URL}/register.html`, '_blank')">Create Account</a>
                 <!-- <a href="/audio-files" class="quick-link">Browse Audio Files</a>
                 <a href="#" class="quick-link" onclick="showCurrentFiles()">Current Files</a> -->
-                <a href="/api/status" class="quick-link">Server Status</a>
+                <a href="#" class="quick-link" onclick="window.open(`${SERVER_URL}/api/status`, '_blank')">Server Status</a>
             </div>
         </div>
 
@@ -226,6 +226,8 @@
     </div>
 
     <script>
+        const SERVER_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        
         // Check server status on load
         document.addEventListener('DOMContentLoaded', function() {
             checkServerStatus();
@@ -233,7 +235,7 @@
 
         async function checkServerStatus() {
             try {
-                const response = await fetch('/api/status');
+                const response = await fetch(`${SERVER_URL}/api/status`);
                 const status = await response.json();
                 
                 const indicator = document.getElementById('server-status');
@@ -264,7 +266,7 @@
                 filesInfo.style.display = 'block';
                 
                 try {
-                    const response = await fetch('/api/files');
+                    const response = await fetch(`${SERVER_URL}/api/files`);
                     const data = await response.json();
                     
                     if (data.audioFiles && data.audioFiles.length > 0) {
