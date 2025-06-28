@@ -3,196 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Collection</title>
+    <title>Audio Server - Welcome</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+
+        .landing-container {
             background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        h1 {
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
             color: #4a5568;
-            margin-bottom: 30px;
-            font-size: 2.5em;
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
-        
-        .loading {
-            text-align: center;
-            color: #667eea;
+
+        .header p {
+            color: #718096;
             font-size: 1.2em;
-            padding: 40px;
+            line-height: 1.5;
         }
-        
-        .error {
-            text-align: center;
-            color: #e53e3e;
-            font-size: 1.1em;
-            padding: 20px;
-            background: #fed7d7;
-            border-radius: 5px;
-            margin: 20px 0;
+
+        .auth-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
         }
-        
-        .audio-item {
+
+        .auth-card {
             background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 5px solid #667eea;
-            transition: transform 0.2s ease;
+            border-radius: 15px;
+            padding: 30px 20px;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
-        
-        .audio-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+
+        .auth-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
         }
-        
-        .audio-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: #2d3748;
+
+        .auth-card-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .auth-card h3 {
+            color: #4a5568;
+            font-size: 1.3em;
             margin-bottom: 10px;
         }
-        
-        audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
+
+        .auth-card p {
             color: #718096;
             font-size: 0.9em;
+            line-height: 1.4;
         }
-        
+
+        .participant-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .participant-card h3,
+        .participant-card p {
+            color: white;
+        }
+
+        .admin-card:hover {
+            border-color: #f56565;
+        }
+
+        .quick-access {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .quick-access h4 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            border-radius: 20px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .quick-link:hover {
+            background: #667eea;
+            color: white;
+        }
+
         .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
             border-radius: 50%;
-            margin-right: 8px;
+            animation: pulse 2s infinite;
         }
-        
-        .status-online {
-            background-color: #48bb78;
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-        
-        .status-offline {
-            background-color: #f56565;
+
+        @media (max-width: 768px) {
+            .landing-container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2.2em;
+            }
+
+            .auth-options {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .quick-links {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎵 Audio Collection</h1>
-        
-        <div id="loading" class="loading">
-            Loading audio files...
+    <div class="landing-container">
+        <div class="header">
+            <h1>🎵 Audio Server</h1>
+            <p>Welcome to the scheduled audio streaming platform</p>
+            
+            <div class="status-indicator" id="server-status">
+                <span class="status-dot"></span>
+                <span>Server Online</span>
+            </div>
         </div>
-        
-        <div id="audio-container">
-            <!-- Audio players will be dynamically loaded here -->
+
+        <div class="auth-options">
+            <a href="/login.html" class="auth-card participant-card">
+                <div class="auth-card-icon">👥</div>
+                <h3>Participant Login</h3>
+                <p>Access your assigned audio schedules and listen to available content</p>
+            </a>
+
+            <a href="/admin-login.html" class="auth-card admin-card">
+                <div class="auth-card-icon">⚙️</div>
+                <h3>Admin Panel</h3>
+                <p>Manage collections, schedules, users, and server settings</p>
+            </a>
         </div>
-        
-        <div class="footer">
-            <p>
-                <span id="status-indicator" class="status-indicator status-offline"></span>
-                <span id="status-text">Connecting to local server...</span>
-            </p>
-            <p>Hosted on GitHub Pages • Audio served from local machine</p>
+
+        <div class="quick-access">
+            <h4>Quick Access</h4>
+            <div class="quick-links">
+                <a href="/register.html" class="quick-link">Create Account</a>
+                <!-- <a href="/audio-files" class="quick-link">Browse Audio Files</a>
+                <a href="#" class="quick-link" onclick="showCurrentFiles()">Current Files</a> -->
+                <a href="/api/status" class="quick-link">Server Status</a>
+            </div>
+        </div>
+
+        <div id="current-files-info" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; display: none;">
+            <h5 style="color: #4a5568; margin-bottom: 10px;">Currently Available Files</h5>
+            <div id="files-list">Loading...</div>
         </div>
     </div>
 
     <script>
-        const SERVER_URL = 'https://sleepy-thunder-45656.pktriot.net';
-        
-        async function loadAudioFiles() {
-            const loadingDiv = document.getElementById('loading');
-            const audioContainer = document.getElementById('audio-container');
-            const statusIndicator = document.getElementById('status-indicator');
-            const statusText = document.getElementById('status-text');
-            
+        // Check server status on load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServerStatus();
+        });
+
+        async function checkServerStatus() {
             try {
-                // Fetch audio file list from your local server
-                const response = await fetch(`${SERVER_URL}/api/files`);
+                const response = await fetch('/api/status');
+                const status = await response.json();
                 
-                if (!response.ok) {
-                    throw new Error(`Server responded with ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Update status to online
-                statusIndicator.className = 'status-indicator status-online';
-                statusText.textContent = 'Connected to local server';
-                
-                // Hide loading message
-                loadingDiv.style.display = 'none';
-                
-                // Create audio players for each file
-                if (data.audioFiles && data.audioFiles.length > 0) {
-                    data.audioFiles.forEach(file => {
-                        const audioItem = document.createElement('div');
-                        audioItem.className = 'audio-item';
-                        
-                        audioItem.innerHTML = `
-                            <div class="audio-title">${file.name}</div>
-                            <audio controls preload="metadata" controlslist="nodownload">
-                                <source src="${SERVER_URL}${file.url}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                        `;
-                        
-                        audioContainer.appendChild(audioItem);
-                    });
+                const indicator = document.getElementById('server-status');
+                if (response.ok) {
+                    indicator.innerHTML = `
+                        <span class="status-dot"></span>
+                        <span>Server Online - ${status.filesAvailable} files available</span>
+                    `;
                 } else {
-                    audioContainer.innerHTML = '<div class="error">No audio files found on the server.</div>';
+                    throw new Error('Server offline');
                 }
-                
             } catch (error) {
-                console.error('Failed to load audio files:', error);
-                
-                // Update status to offline
-                statusIndicator.className = 'status-indicator status-offline';
-                statusText.textContent = 'Server offline or unreachable';
-                
-                // Hide loading and show error
-                loadingDiv.style.display = 'none';
-                audioContainer.innerHTML = `
-                    <div class="error">
-                        Unable to connect to the local audio server. 
-                        <br>Please make sure the Node.js server is running on your local machine.
-                        <br><small>Error: ${error.message}</small>
-                    </div>
+                const indicator = document.getElementById('server-status');
+                indicator.style.background = '#f8d7da';
+                indicator.style.color = '#721c24';
+                indicator.innerHTML = `
+                    <span class="status-dot" style="background: #f56565;"></span>
+                    <span>Server Offline</span>
                 `;
             }
         }
-        
-        // Load audio files when page loads
-        document.addEventListener('DOMContentLoaded', loadAudioFiles);
-        
-        // Retry connection every 30 seconds if offline
-        setInterval(() => {
-            const statusIndicator = document.getElementById('status-indicator');
-            if (statusIndicator.classList.contains('status-offline')) {
-                loadAudioFiles();
+
+        async function showCurrentFiles() {
+            const filesInfo = document.getElementById('current-files-info');
+            const filesList = document.getElementById('files-list');
+            
+            if (filesInfo.style.display === 'none') {
+                filesInfo.style.display = 'block';
+                
+                try {
+                    const response = await fetch('/api/files');
+                    const data = await response.json();
+                    
+                    if (data.audioFiles && data.audioFiles.length > 0) {
+                        filesList.innerHTML = data.audioFiles.map(file => 
+                            `<div style="padding: 5px 0; color: #4a5568;">🎵 ${file.name}</div>`
+                        ).join('');
+                    } else {
+                        filesList.innerHTML = '<div style="color: #718096;">No files currently available</div>';
+                    }
+                } catch (error) {
+                    filesList.innerHTML = '<div style="color: #e53e3e;">Error loading files</div>';
+                }
+            } else {
+                filesInfo.style.display = 'none';
             }
-        }, 30000);
+        }
+
+        // Auto-refresh server status every 30 seconds
+        setInterval(checkServerStatus, 30000);
     </script>
 </body>
 </html>
