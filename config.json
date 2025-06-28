@@ -21,17 +21,29 @@
       "verified": false,
       "createdAt": "2025-06-26T11:19:48.097Z",
       "schedules": []
+    },
+    "1a962d92-1e10-40c9-a998-214e2b162235": {
+      "id": "1a962d92-1e10-40c9-a998-214e2b162235",
+      "name": "Guest",
+      "email": "guest@gmail.com",
+      "password": "$2b$10$oulLPojJAHcDc8BRe6bwbO6DpJ05j5ACI4XM5C/m3BYwz/SUJPLXm",
+      "verified": false,
+      "createdAt": "2025-06-28T12:25:43.000Z",
+      "schedules": []
     }
   },
   "userSchedules": {
     "6f6e7009-fdef-4ba9-bd1d-45f397a4ca01": [
       "test_schedule",
       "himanshi_didi_schedule"
+    ],
+    "1a962d92-1e10-40c9-a998-214e2b162235": [
+      "shivin_mausa_ji_schedule"
     ]
   },
   "activeSchedules": [
     "test_schedule",
-    "himanshi_didi_schedule"
+    "shivin_mausa_ji_schedule"
   ],
   "collections": {
     "sample": {
