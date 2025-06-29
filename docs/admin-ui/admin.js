@@ -1,5 +1,5 @@
 // Admin Panel JavaScript
-const API_BASE = 'http://sleepy-thunder-45656.pktriot.net';
+const API_BASE = 'https://sleepy-thunder-45656.pktriot.net';
 
 let config = {};
 let currentTab = 'dashboard';
