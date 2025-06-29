@@ -823,6 +823,13 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     
     console.log(`🎵 Serving file: ${filePath}`);
     
+    // Log client connection details and timing
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    console.log(`📱 Client: ${clientIP} | User-Agent: ${userAgent?.slice(0, 50)}...`);
+    console.log(`⏰ Stream started at: ${new Date().toISOString()}`);
+    
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
@@ -852,8 +859,11 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
         'Connection': 'keep-alive',
+        'Keep-Alive': 'timeout=300, max=1000', // Extended keep-alive
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Range'
+        'Access-Control-Allow-Headers': 'Range',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Disposition': 'inline'
     });
     
     // Set longer timeout for audio streaming
@@ -885,7 +895,26 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         
         // Handle connection close
         res.on('close', () => {
-            console.log(`Client disconnected while streaming ${filename}`);
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`🔌 Client disconnected while streaming ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            file.destroy();
+        });
+        
+        // Handle request abort
+        req.on('aborted', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`❌ Request aborted for ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            file.destroy();
+        });
+        
+        // Handle connection errors
+        req.on('error', (err) => {
+            console.log(`🚫 Request error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
+        res.on('error', (err) => {
+            console.log(`🚫 Response error for ${filename}:`, err.message);
             file.destroy();
         });
         
@@ -905,7 +934,26 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         
         // Handle connection close
         res.on('close', () => {
-            console.log(`Client disconnected while streaming ${filename}`);
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`🔌 Client disconnected while streaming ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            file.destroy();
+        });
+        
+        // Handle request abort
+        req.on('aborted', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`❌ Request aborted for ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            file.destroy();
+        });
+        
+        // Handle connection errors
+        req.on('error', (err) => {
+            console.log(`🚫 Request error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
+        res.on('error', (err) => {
+            console.log(`🚫 Response error for ${filename}:`, err.message);
             file.destroy();
         });
         
@@ -917,6 +965,23 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
 app.get('/api/files', (req, res) => {
     const activeFiles = getActiveFiles();
     res.json({ audioFiles: activeFiles });
+});
+
+// Connection test endpoint
+app.get('/api/connection-test', (req, res) => {
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    
+    console.log(`🔍 Connection test from ${clientIP} | ${userAgent?.slice(0, 50)}...`);
+    
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        clientIP: clientIP,
+        userAgent: userAgent,
+        headers: req.headers,
+        message: 'Connection test successful'
+    });
 });
 
 app.get('/api/status', (req, res) => {
