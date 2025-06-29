@@ -768,10 +768,26 @@ app.post('/admin/reset', authenticateAdmin, (req, res) => {
     res.json({ success: true });
 });
 
+// Track active streams
+const activeStreams = new Map();
+
 // Audio file serving with schedule checking (supports multiple formats)
 app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     const filename = decodeURIComponent(req.path.substring(1));
+    const streamId = `${filename}_${Date.now()}`;
+    
     console.log(`\n🎵 Audio request for: ${filename}`);
+    console.log(`🆔 Stream ID: ${streamId}`);
+    
+    // Check if there are other active streams for the same file
+    const existingStreams = Array.from(activeStreams.keys()).filter(id => id.startsWith(filename));
+    if (existingStreams.length > 0) {
+        console.log(`⚠️  Warning: ${existingStreams.length} other active streams for this file: ${existingStreams.join(', ')}`);
+    }
+    
+    // Add this stream to active tracking  
+    activeStreams.set(streamId, { filename, startTime: Date.now(), clientIP: req.ip });
+    console.log(`📊 Total active streams: ${activeStreams.size}`);
     
     const activeFiles = getActiveFiles();
     console.log(`Active files: ${activeFiles.map(f => f.name).join(', ')}`);
@@ -829,6 +845,8 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     const userAgent = req.headers['user-agent'];
     console.log(`📱 Client: ${clientIP} | User-Agent: ${userAgent?.slice(0, 50)}...`);
     console.log(`⏰ Stream started at: ${new Date().toISOString()}`);
+    console.log(`🔗 Request URL: ${req.url}`);
+    console.log(`📋 Request headers:`, JSON.stringify(req.headers, null, 2));
     
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
@@ -897,6 +915,8 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         res.on('close', () => {
             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
             console.log(`🔌 Client disconnected while streaming ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
             file.destroy();
         });
         
@@ -904,6 +924,8 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         req.on('aborted', () => {
             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
             console.log(`❌ Request aborted for ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
             file.destroy();
         });
         
@@ -936,6 +958,8 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         res.on('close', () => {
             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
             console.log(`🔌 Client disconnected while streaming ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
             file.destroy();
         });
         
@@ -943,6 +967,8 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
         req.on('aborted', () => {
             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
             console.log(`❌ Request aborted for ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
             file.destroy();
         });
         
