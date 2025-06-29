@@ -30,6 +30,24 @@
       "verified": false,
       "createdAt": "2025-06-28T12:25:43.000Z",
       "schedules": []
+    },
+    "ce129951-41f7-4444-b451-aebdb5ecd841": {
+      "id": "ce129951-41f7-4444-b451-aebdb5ecd841",
+      "name": "Test User",
+      "email": "test@example.com",
+      "password": "$2b$10$YbBG/w5d6/ftF6hw7ioVQuUqGLguH/pPo7V2I8xgyHnYYDKDCJMM6",
+      "verified": false,
+      "createdAt": "2025-06-29T12:08:04.953Z",
+      "schedules": []
+    },
+    "bc5d61ab-ddde-4265-baab-5df72c78b4b8": {
+      "id": "bc5d61ab-ddde-4265-baab-5df72c78b4b8",
+      "name": "Test user",
+      "email": "a@b.com",
+      "password": "$2b$10$bI5fu/auPbbTtHpsTqNTWOorHW8kJqy3FhQEKCcRUEW3HJnEB.aby",
+      "verified": false,
+      "createdAt": "2025-06-29T12:08:43.743Z",
+      "schedules": []
     }
   },
   "userSchedules": {
@@ -39,11 +57,12 @@
     ],
     "1a962d92-1e10-40c9-a998-214e2b162235": [
       "shivin_mausa_ji_schedule"
-    ]
+    ],
+    "ce129951-41f7-4444-b451-aebdb5ecd841": [],
+    "bc5d61ab-ddde-4265-baab-5df72c78b4b8": []
   },
   "activeSchedules": [
-    "test_schedule",
-    "shivin_mausa_ji_schedule"
+    "test_schedule"
   ],
   "collections": {
     "sample": {
