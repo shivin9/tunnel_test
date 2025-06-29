@@ -10,7 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 8000;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
-const ADMIN_UI_DIR = path.join(__dirname, 'admin-ui');
+const ADMIN_UI_DIR = path.join(__dirname, 'docs/admin-ui');
 
 // Middleware
 app.use(express.json());
@@ -35,8 +35,8 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-// Static files are now served by GitHub Pages
-// app.use(express.static(path.join(__dirname, 'docs')));
+// Static files are served both locally and by GitHub Pages
+app.use(express.static(path.join(__dirname, 'docs')));
 
 // Configuration management
 let config = {};
@@ -481,8 +481,8 @@ app.get('/user/stats', authenticateToken, (req, res) => {
     });
 });
 
-// Admin UI is now served by GitHub Pages
-// app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
+// Admin UI served both locally and by GitHub Pages
+app.use('/admin', express.static(ADMIN_UI_DIR));
 
 // Admin API endpoints (all protected)
 app.get('/admin/config', authenticateAdmin, (req, res) => {
