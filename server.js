@@ -15,7 +15,13 @@ const ADMIN_UI_DIR = path.join(__dirname, 'admin-ui');
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: ['https://shivin-sri.github.io', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [
+        'https://shivin9.github.io', 
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080'
+    ],
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Range', 'Content-Type', 'Accept-Ranges', 'Authorization'],
     exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'],
