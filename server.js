@@ -846,12 +846,19 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
             break;
     }
     
-    // Set content type and headers
+    // Set content type and headers for better streaming
     res.set({
         'Content-Type': contentType,
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Range'
     });
+    
+    // Set longer timeout for audio streaming
+    res.setTimeout(0); // Disable timeout
+    req.setTimeout(0); // Disable timeout
     
     if (range) {
         // Handle range requests for audio streaming
@@ -868,11 +875,40 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
             'Content-Length': chunksize
         });
         
+        // Handle stream errors
+        file.on('error', (err) => {
+            console.error(`Stream error for ${filename}:`, err);
+            if (!res.headersSent) {
+                res.status(500).send('Stream error');
+            }
+        });
+        
+        // Handle connection close
+        res.on('close', () => {
+            console.log(`Client disconnected while streaming ${filename}`);
+            file.destroy();
+        });
+        
         file.pipe(res);
     } else {
         // Send entire file
         res.set('Content-Length', fileSize);
         const file = fs.createReadStream(filePath);
+        
+        // Handle stream errors
+        file.on('error', (err) => {
+            console.error(`Stream error for ${filename}:`, err);
+            if (!res.headersSent) {
+                res.status(500).send('Stream error');
+            }
+        });
+        
+        // Handle connection close
+        res.on('close', () => {
+            console.log(`Client disconnected while streaming ${filename}`);
+            file.destroy();
+        });
+        
         file.pipe(res);
     }
 });
@@ -913,7 +949,7 @@ setInterval(() => {
     config.activeSchedules = activeSchedules;
 }, 60000);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🎵 Scheduled Audio Server running at http://localhost:${PORT}`);
     console.log(`📱 Admin Panel: http://localhost:${PORT}/admin`);
     console.log(`🌐 Public URL: https://sleepy-thunder-45656.pktriot.net`);
@@ -921,3 +957,8 @@ app.listen(PORT, () => {
     console.log("✅ CORS and scheduling enabled");
     console.log("Press Ctrl+C to stop the server");
 });
+
+// Set server timeout to 0 (unlimited) for long audio streams
+server.timeout = 0;
+server.keepAliveTimeout = 65000; // 65 seconds
+server.headersTimeout = 66000; // 66 seconds
