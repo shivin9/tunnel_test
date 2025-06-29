@@ -201,6 +201,15 @@
 
                 <div class="dashboard-card">
                     <h3>🎵 Currently Available Audio Files</h3>
+                    
+                    <!-- Single Audio Player -->
+                    <div id="current-player" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div id="current-track-name" style="font-weight: bold; margin-bottom: 10px;"></div>
+                        <audio id="main-audio" controls preload="none" style="width: 100%;" controlslist="nodownload">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    
                     <div id="audio-files">No files available at this time.</div>
                 </div>
             </div>
@@ -211,9 +220,11 @@
         let userToken = localStorage.getItem('authToken');
         let currentUser = null;
 
+        const API_BASE_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        
         // Check authentication on load
         if (!userToken) {
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -297,21 +308,47 @@
                 container.innerHTML = '<p>No audio files are currently available.</p>';
                 statusIndicator.className = 'status status-unavailable';
                 statusText.textContent = 'No audio files available at this time';
+                document.getElementById('current-player').style.display = 'none';
                 return;
             }
 
             statusIndicator.className = 'status status-available';
             statusText.textContent = `${files.length} audio file(s) currently available`;
 
-            container.innerHTML = files.map(file => `
-                <div class="audio-player">
-                    <div class="audio-title">${file.name}</div>
-                    <audio controls preload="metadata" controlslist="nodownload">
-                        <source src="${file.url}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
+            // Create file list with play buttons instead of individual audio players
+            container.innerHTML = files.map((file, index) => `
+                <div class="audio-file-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border: 1px solid #e2e8f0; border-radius: 5px; margin: 5px 0;">
+                    <div class="audio-title" style="flex: 1; font-weight: 500;">${file.name}</div>
+                    <button onclick="playAudio('${file.name}', '${API_BASE_URL}${file.url}')" 
+                            style="background: #4299e1; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                        ▶ Play
+                    </button>
                 </div>
             `).join('');
+        }
+
+        function playAudio(fileName, audioUrl) {
+            const player = document.getElementById('current-player');
+            const trackName = document.getElementById('current-track-name');
+            const audio = document.getElementById('main-audio');
+            
+            // Show the player
+            player.style.display = 'block';
+            
+            // Set track name
+            trackName.textContent = `Now Playing: ${fileName}`;
+            
+            // Set audio source
+            audio.src = audioUrl;
+            
+            // Play the audio
+            audio.load();
+            audio.play().catch(error => {
+                console.error('Error playing audio:', error);
+                alert('Error playing audio file. Please try again.');
+            });
+            
+            console.log(`Playing: ${fileName}`);
         }
 
         function formatDaysOfWeek(dayOfWeek) {
@@ -349,14 +386,15 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${userToken}`
-                }
+                },
+                credentials: 'include'
             };
             
             if (data) {
                 options.body = JSON.stringify(data);
             }
             
-            const response = await fetch(endpoint, options);
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
             
             if (response.status === 401) {
                 logout();
@@ -372,7 +410,7 @@
 
         function logout() {
             localStorage.removeItem('authToken');
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
     </script>
 </body>

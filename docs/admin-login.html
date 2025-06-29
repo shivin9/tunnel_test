@@ -192,11 +192,11 @@
             </div>
 
             <button type="submit" class="btn btn-primary">Access Admin Panel</button>
-            <a href="/" class="btn btn-secondary">← Back to Home</a>
+            <a href="index.html" class="btn btn-secondary">← Back to Home</a>
         </form>
 
         <div class="form-links">
-            <a href="/login.html">Participant Login</a>
+            <a href="login.html">Participant Login</a>
         </div>
     </div>
 
@@ -228,11 +228,12 @@
             showLoading(true);
             
             try {
-                const response = await fetch('/admin/authenticate', {
+                const response = await fetch('https://sleepy-thunder-45656.pktriot.net/admin/authenticate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ password })
                 });
                 
@@ -240,8 +241,10 @@
                 
                 if (response.ok) {
                     showAlert('Login successful! Redirecting...', 'success');
+                    // Store admin token
+                    localStorage.setItem('adminToken', result.token);
                     setTimeout(() => {
-                        window.location.href = '/admin/';
+                        window.location.href = 'admin-ui/index.html';
                     }, 1000);
                 } else {
                     showAlert(result.error || 'Login failed', 'error');

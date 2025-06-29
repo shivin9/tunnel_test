@@ -1,11 +1,18 @@
 // Admin Panel JavaScript
-const API_BASE = '';
+const API_BASE = 'https://sleepy-thunder-45656.pktriot.net';
 
 let config = {};
 let currentTab = 'dashboard';
 
 // Initialize the admin panel
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if admin is authenticated
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+        window.location.href = '../admin-login.html';
+        return;
+    }
+    
     loadConfig();
     updateCurrentTime();
     setInterval(updateCurrentTime, 1000);
@@ -50,11 +57,15 @@ function showTab(tabName) {
 // API Functions
 async function apiCall(endpoint, method = 'GET', data = null) {
     try {
+        const adminToken = localStorage.getItem('adminToken');
+        
         const options = {
             method,
             headers: {
                 'Content-Type': 'application/json',
-            }
+                'Authorization': `Bearer ${adminToken}`
+            },
+            credentials: 'include'
         };
         
         if (data) {
@@ -62,6 +73,13 @@ async function apiCall(endpoint, method = 'GET', data = null) {
         }
         
         const response = await fetch(API_BASE + endpoint, options);
+        
+        if (response.status === 401 || response.status === 403) {
+            // Token expired or invalid - redirect to login
+            localStorage.removeItem('adminToken');
+            window.location.href = '../admin-login.html';
+            return;
+        }
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -941,15 +959,15 @@ async function logout() {
     if (confirm('Are you sure you want to logout?')) {
         try {
             await apiCall('/admin/logout', 'POST');
-            // Clear any local storage
-            localStorage.removeItem('adminAuthenticated');
-            localStorage.removeItem('adminAuthTime');
+            // Clear admin token
+            localStorage.removeItem('adminToken');
             // Redirect to admin login
-            window.location.href = '/admin-login.html';
+            window.location.href = '../admin-login.html';
         } catch (error) {
             console.error('Logout failed:', error);
             // Force redirect even if API call fails
-            window.location.href = '/admin-login.html';
+            localStorage.removeItem('adminToken');
+            window.location.href = '../admin-login.html';
         }
     }
 }

@@ -15,10 +15,17 @@ const ADMIN_UI_DIR = path.join(__dirname, 'admin-ui');
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: '*',
+    origin: [
+        'https://shivin9.github.io', 
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080'
+    ],
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Range', 'Content-Type', 'Accept-Ranges', 'Authorization'],
-    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
+    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'],
+    credentials: true
 }));
 
 app.use(session({
@@ -28,8 +35,8 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'docs')));
+// Static files are now served by GitHub Pages
+// app.use(express.static(path.join(__dirname, 'docs')));
 
 // Configuration management
 let config = {};
@@ -167,15 +174,28 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// Admin authentication middleware
+// Admin JWT authentication middleware
 function authenticateAdmin(req, res, next) {
-    const isAuthenticated = req.session.adminAuthenticated;
-    
-    if (!isAuthenticated) {
-        return res.redirect('/admin-login.html');
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Admin authentication required' });
     }
-    
-    next();
+
+    jwt.verify(token, config.settings.jwtSecret, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired admin token' });
+        }
+        
+        // Check if it's an admin token
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        req.admin = decoded;
+        next();
+    });
 }
 
 // Generate JWT token
@@ -415,23 +435,27 @@ app.post('/admin/authenticate', (req, res) => {
         return res.status(401).json({ error: 'Invalid admin password' });
     }
     
-    // Set admin session
-    req.session.adminAuthenticated = true;
-    req.session.adminAuthTime = new Date().getTime();
+    // Generate JWT token for admin
+    const adminToken = jwt.sign(
+        { role: 'admin', authenticated: true },
+        config.settings.jwtSecret,
+        { expiresIn: '24h' }
+    );
     
     console.log(`✅ Admin authenticated successfully`);
-    res.json({ success: true, message: 'Admin authentication successful' });
+    res.json({ 
+        success: true, 
+        message: 'Admin authentication successful',
+        token: adminToken
+    });
 });
 
 // Admin logout route
 app.post('/admin/logout', (req, res) => {
-    req.session.adminAuthenticated = false;
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Logout failed' });
-        }
-        res.json({ success: true, message: 'Logged out successfully' });
-    });
+    // With JWT, logout is handled client-side by removing the token
+    // Server doesn't need to track anything
+    console.log(`✅ Admin logged out`);
+    res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // User-specific routes
@@ -457,8 +481,8 @@ app.get('/user/stats', authenticateToken, (req, res) => {
     });
 });
 
-// Serve admin UI with authentication
-app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
+// Admin UI is now served by GitHub Pages
+// app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
 
 // Admin API endpoints (all protected)
 app.get('/admin/config', authenticateAdmin, (req, res) => {
@@ -744,10 +768,26 @@ app.post('/admin/reset', authenticateAdmin, (req, res) => {
     res.json({ success: true });
 });
 
+// Track active streams
+const activeStreams = new Map();
+
 // Audio file serving with schedule checking (supports multiple formats)
 app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     const filename = decodeURIComponent(req.path.substring(1));
+    const streamId = `${filename}_${Date.now()}`;
+    
     console.log(`\n🎵 Audio request for: ${filename}`);
+    console.log(`🆔 Stream ID: ${streamId}`);
+    
+    // Check if there are other active streams for the same file
+    const existingStreams = Array.from(activeStreams.keys()).filter(id => id.startsWith(filename));
+    if (existingStreams.length > 0) {
+        console.log(`⚠️  Warning: ${existingStreams.length} other active streams for this file: ${existingStreams.join(', ')}`);
+    }
+    
+    // Add this stream to active tracking  
+    activeStreams.set(streamId, { filename, startTime: Date.now(), clientIP: req.ip });
+    console.log(`📊 Total active streams: ${activeStreams.size}`);
     
     const activeFiles = getActiveFiles();
     console.log(`Active files: ${activeFiles.map(f => f.name).join(', ')}`);
@@ -799,6 +839,15 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
     
     console.log(`🎵 Serving file: ${filePath}`);
     
+    // Log client connection details and timing
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    console.log(`📱 Client: ${clientIP} | User-Agent: ${userAgent?.slice(0, 50)}...`);
+    console.log(`⏰ Stream started at: ${new Date().toISOString()}`);
+    console.log(`🔗 Request URL: ${req.url}`);
+    console.log(`📋 Request headers:`, JSON.stringify(req.headers, null, 2));
+    
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
@@ -822,12 +871,22 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
             break;
     }
     
-    // Set content type and headers
+    // Set content type and headers for better streaming
     res.set({
         'Content-Type': contentType,
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Connection': 'keep-alive',
+        'Keep-Alive': 'timeout=300, max=1000', // Extended keep-alive
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Range',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Disposition': 'inline'
     });
+    
+    // Set longer timeout for audio streaming
+    res.setTimeout(0); // Disable timeout
+    req.setTimeout(0); // Disable timeout
     
     if (range) {
         // Handle range requests for audio streaming
@@ -844,11 +903,86 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
             'Content-Length': chunksize
         });
         
+        // Handle stream errors
+        file.on('error', (err) => {
+            console.error(`Stream error for ${filename}:`, err);
+            if (!res.headersSent) {
+                res.status(500).send('Stream error');
+            }
+        });
+        
+        // Handle connection close
+        res.on('close', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`🔌 Client disconnected while streaming ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
+            file.destroy();
+        });
+        
+        // Handle request abort
+        req.on('aborted', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`❌ Request aborted for ${filename} (Range: ${start}-${end}/${fileSize}) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
+            file.destroy();
+        });
+        
+        // Handle connection errors
+        req.on('error', (err) => {
+            console.log(`🚫 Request error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
+        res.on('error', (err) => {
+            console.log(`🚫 Response error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
         file.pipe(res);
     } else {
         // Send entire file
         res.set('Content-Length', fileSize);
         const file = fs.createReadStream(filePath);
+        
+        // Handle stream errors
+        file.on('error', (err) => {
+            console.error(`Stream error for ${filename}:`, err);
+            if (!res.headersSent) {
+                res.status(500).send('Stream error');
+            }
+        });
+        
+        // Handle connection close
+        res.on('close', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`🔌 Client disconnected while streaming ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
+            file.destroy();
+        });
+        
+        // Handle request abort
+        req.on('aborted', () => {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`❌ Request aborted for ${filename} (Full file: ${fileSize} bytes) after ${duration}s`);
+            activeStreams.delete(streamId);
+            console.log(`📉 Active streams now: ${activeStreams.size}`);
+            file.destroy();
+        });
+        
+        // Handle connection errors
+        req.on('error', (err) => {
+            console.log(`🚫 Request error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
+        res.on('error', (err) => {
+            console.log(`🚫 Response error for ${filename}:`, err.message);
+            file.destroy();
+        });
+        
         file.pipe(res);
     }
 });
@@ -857,6 +991,23 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
 app.get('/api/files', (req, res) => {
     const activeFiles = getActiveFiles();
     res.json({ audioFiles: activeFiles });
+});
+
+// Connection test endpoint
+app.get('/api/connection-test', (req, res) => {
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    
+    console.log(`🔍 Connection test from ${clientIP} | ${userAgent?.slice(0, 50)}...`);
+    
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        clientIP: clientIP,
+        userAgent: userAgent,
+        headers: req.headers,
+        message: 'Connection test successful'
+    });
 });
 
 app.get('/api/status', (req, res) => {
@@ -873,163 +1024,9 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Serve audio files page (moved from root)
-app.get('/audio-files', (req, res) => {
-    const activeFiles = getActiveFiles();
-    
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Files - Scheduled Audio Server</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #4a5568;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
-        
-        .status {
-            text-align: center;
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            background: ${activeFiles.length > 0 ? '#d4edda' : '#f8d7da'};
-            color: ${activeFiles.length > 0 ? '#155724' : '#721c24'};
-            border: 1px solid ${activeFiles.length > 0 ? '#c3e6cb' : '#f5c6cb'};
-        }
-        
-        .audio-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 5px solid #667eea;
-            transition: transform 0.2s ease;
-        }
-        
-        .audio-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .audio-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-        
-        audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #718096;
-            font-size: 0.9em;
-        }
-        
-        .no-files {
-            text-align: center;
-            padding: 40px;
-            color: #718096;
-        }
-        
-        .nav-links {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .nav-link {
-            background: #667eea;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-<body>
-    <div class="nav-links">
-        <a href="/" class="nav-link">🏠 Home</a>
-        <a href="/admin" class="nav-link">⚙️ Admin</a>
-    </div>
-    
-    <div class="container">
-        <h1>Audio Files</h1>
-        
-        <div class="status">
-            ${activeFiles.length > 0 
-                ? `${activeFiles.length} audio file(s) currently available`
-                : 'No audio files are currently available'
-            }
-        </div>
-        
-        ${activeFiles.length > 0 
-            ? activeFiles.map(file => `
-                <div class="audio-item">
-                    <div class="audio-title">${file.name}</div>
-                    <audio controls preload="metadata" controlslist="nodownload">
-                        <source src="${file.url}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                </div>
-            `).join('')
-            : '<div class="no-files">Audio files will be available during scheduled times.</div>'
-        }
-        
-        <div class="footer">
-            <p>Last updated: ${new Date().toLocaleString()}</p>
-            <p>Served from local machine via pktriot</p>
-        </div>
-    </div>
-    
-    <script>
-        // Auto-refresh every 30 seconds to check for new files
-        setTimeout(() => {
-            window.location.reload();
-        }, 30000);
-    </script>
-</body>
-</html>`;
-    
-    res.send(html);
-});
+// Audio files page is now served by GitHub Pages as dashboard.html
+// This route is no longer needed since the dashboard handles audio file display
+// app.get('/audio-files', (req, res) => { ... });
 
 // Initialize and start server
 loadConfig();
@@ -1043,7 +1040,7 @@ setInterval(() => {
     config.activeSchedules = activeSchedules;
 }, 60000);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🎵 Scheduled Audio Server running at http://localhost:${PORT}`);
     console.log(`📱 Admin Panel: http://localhost:${PORT}/admin`);
     console.log(`🌐 Public URL: https://sleepy-thunder-45656.pktriot.net`);
@@ -1051,3 +1048,8 @@ app.listen(PORT, () => {
     console.log("✅ CORS and scheduling enabled");
     console.log("Press Ctrl+C to stop the server");
 });
+
+// Set server timeout to 0 (unlimited) for long audio streams
+server.timeout = 0;
+server.keepAliveTimeout = 65000; // 65 seconds
+server.headersTimeout = 66000; // 66 seconds
