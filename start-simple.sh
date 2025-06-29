@@ -21,7 +21,7 @@ sleep 3
 # Start pktriot tunnel
 echo "Starting pktriot tunnel..."
 cd pktriot-0.15.6
-./pktriot http 8000 --subdomain sleepy-thunder-45656 &
+./pktriot http 8000 &
 PKTRIOT_PID=$!
 cd ..
 echo "✅ Pktriot tunnel started (PID: $PKTRIOT_PID)"
