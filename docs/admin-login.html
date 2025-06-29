@@ -241,6 +241,8 @@
                 
                 if (response.ok) {
                     showAlert('Login successful! Redirecting...', 'success');
+                    // Store admin token
+                    localStorage.setItem('adminToken', result.token);
                     setTimeout(() => {
                         window.location.href = 'admin-ui/index.html';
                     }, 1000);

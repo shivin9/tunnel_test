@@ -168,19 +168,28 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// Admin authentication middleware
+// Admin JWT authentication middleware
 function authenticateAdmin(req, res, next) {
-    const isAuthenticated = req.session.adminAuthenticated;
-    
-    if (!isAuthenticated) {
-        // For API calls, return JSON error instead of redirect
-        if (req.path.startsWith('/admin/')) {
-            return res.status(401).json({ error: 'Admin authentication required' });
-        }
-        return res.redirect('/admin-login.html');
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Admin authentication required' });
     }
-    
-    next();
+
+    jwt.verify(token, config.settings.jwtSecret, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired admin token' });
+        }
+        
+        // Check if it's an admin token
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        req.admin = decoded;
+        next();
+    });
 }
 
 // Generate JWT token
@@ -420,23 +429,27 @@ app.post('/admin/authenticate', (req, res) => {
         return res.status(401).json({ error: 'Invalid admin password' });
     }
     
-    // Set admin session
-    req.session.adminAuthenticated = true;
-    req.session.adminAuthTime = new Date().getTime();
+    // Generate JWT token for admin
+    const adminToken = jwt.sign(
+        { role: 'admin', authenticated: true },
+        config.settings.jwtSecret,
+        { expiresIn: '24h' }
+    );
     
     console.log(`✅ Admin authenticated successfully`);
-    res.json({ success: true, message: 'Admin authentication successful' });
+    res.json({ 
+        success: true, 
+        message: 'Admin authentication successful',
+        token: adminToken
+    });
 });
 
 // Admin logout route
 app.post('/admin/logout', (req, res) => {
-    req.session.adminAuthenticated = false;
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Logout failed' });
-        }
-        res.json({ success: true, message: 'Logged out successfully' });
-    });
+    // With JWT, logout is handled client-side by removing the token
+    // Server doesn't need to track anything
+    console.log(`✅ Admin logged out`);
+    res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // User-specific routes
