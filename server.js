@@ -15,10 +15,11 @@ const ADMIN_UI_DIR = path.join(__dirname, 'admin-ui');
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: '*',
+    origin: ['https://shivin-sri.github.io', 'http://localhost:3000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Range', 'Content-Type', 'Accept-Ranges', 'Authorization'],
-    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
+    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'],
+    credentials: true
 }));
 
 app.use(session({
@@ -28,8 +29,8 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'docs')));
+// Static files are now served by GitHub Pages
+// app.use(express.static(path.join(__dirname, 'docs')));
 
 // Configuration management
 let config = {};
@@ -172,6 +173,10 @@ function authenticateAdmin(req, res, next) {
     const isAuthenticated = req.session.adminAuthenticated;
     
     if (!isAuthenticated) {
+        // For API calls, return JSON error instead of redirect
+        if (req.path.startsWith('/admin/')) {
+            return res.status(401).json({ error: 'Admin authentication required' });
+        }
         return res.redirect('/admin-login.html');
     }
     
@@ -457,8 +462,8 @@ app.get('/user/stats', authenticateToken, (req, res) => {
     });
 });
 
-// Serve admin UI with authentication
-app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
+// Admin UI is now served by GitHub Pages
+// app.use('/admin', authenticateAdmin, express.static(ADMIN_UI_DIR));
 
 // Admin API endpoints (all protected)
 app.get('/admin/config', authenticateAdmin, (req, res) => {
@@ -873,163 +878,9 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Serve audio files page (moved from root)
-app.get('/audio-files', (req, res) => {
-    const activeFiles = getActiveFiles();
-    
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Files - Scheduled Audio Server</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #4a5568;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
-        
-        .status {
-            text-align: center;
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            background: ${activeFiles.length > 0 ? '#d4edda' : '#f8d7da'};
-            color: ${activeFiles.length > 0 ? '#155724' : '#721c24'};
-            border: 1px solid ${activeFiles.length > 0 ? '#c3e6cb' : '#f5c6cb'};
-        }
-        
-        .audio-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 5px solid #667eea;
-            transition: transform 0.2s ease;
-        }
-        
-        .audio-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .audio-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-        
-        audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #718096;
-            font-size: 0.9em;
-        }
-        
-        .no-files {
-            text-align: center;
-            padding: 40px;
-            color: #718096;
-        }
-        
-        .nav-links {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .nav-link {
-            background: #667eea;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-<body>
-    <div class="nav-links">
-        <a href="/" class="nav-link">🏠 Home</a>
-        <a href="/admin" class="nav-link">⚙️ Admin</a>
-    </div>
-    
-    <div class="container">
-        <h1>Audio Files</h1>
-        
-        <div class="status">
-            ${activeFiles.length > 0 
-                ? `${activeFiles.length} audio file(s) currently available`
-                : 'No audio files are currently available'
-            }
-        </div>
-        
-        ${activeFiles.length > 0 
-            ? activeFiles.map(file => `
-                <div class="audio-item">
-                    <div class="audio-title">${file.name}</div>
-                    <audio controls preload="metadata" controlslist="nodownload">
-                        <source src="${file.url}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                </div>
-            `).join('')
-            : '<div class="no-files">Audio files will be available during scheduled times.</div>'
-        }
-        
-        <div class="footer">
-            <p>Last updated: ${new Date().toLocaleString()}</p>
-            <p>Served from local machine via pktriot</p>
-        </div>
-    </div>
-    
-    <script>
-        // Auto-refresh every 30 seconds to check for new files
-        setTimeout(() => {
-            window.location.reload();
-        }, 30000);
-    </script>
-</body>
-</html>`;
-    
-    res.send(html);
-});
+// Audio files page is now served by GitHub Pages as dashboard.html
+// This route is no longer needed since the dashboard handles audio file display
+// app.get('/audio-files', (req, res) => { ... });
 
 // Initialize and start server
 loadConfig();

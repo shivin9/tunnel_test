@@ -179,12 +179,14 @@
         </form>
 
         <div class="form-links">
-            <a href="/login.html">Already have an account? Sign in</a> | 
-            <a href="/">← Back to Home</a>
+            <a href="login.html">Already have an account? Sign in</a> | 
+            <a href="index.html">← Back to Home</a>
         </div>
     </div>
 
     <script>
+        const API_BASE_URL = 'http://sleepy-thunder-45656.pktriot.net';
+        
         document.getElementById('register-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -202,11 +204,12 @@
             showLoading(true);
             
             try {
-                const response = await fetch('/auth/register', {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ name, email, password })
                 });
                 
@@ -215,7 +218,7 @@
                 if (response.ok) {
                     showAlert('Account created successfully! Please check your email for verification.', 'success');
                     setTimeout(() => {
-                        window.location.href = '/login.html';
+                        window.location.href = 'login.html';
                     }, 2000);
                 } else {
                     showAlert(result.error || 'Registration failed', 'error');

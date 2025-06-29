@@ -211,9 +211,11 @@
         let userToken = localStorage.getItem('authToken');
         let currentUser = null;
 
+        const API_BASE_URL = 'http://sleepy-thunder-45656.pktriot.net';
+        
         // Check authentication on load
         if (!userToken) {
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -307,7 +309,7 @@
                 <div class="audio-player">
                     <div class="audio-title">${file.name}</div>
                     <audio controls preload="metadata" controlslist="nodownload">
-                        <source src="${file.url}" type="audio/mpeg">
+                        <source src="${API_BASE_URL}${file.url}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
                 </div>
@@ -349,14 +351,15 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${userToken}`
-                }
+                },
+                credentials: 'include'
             };
             
             if (data) {
                 options.body = JSON.stringify(data);
             }
             
-            const response = await fetch(endpoint, options);
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
             
             if (response.status === 401) {
                 logout();
@@ -372,7 +375,7 @@
 
         function logout() {
             localStorage.removeItem('authToken');
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
     </script>
 </body>
