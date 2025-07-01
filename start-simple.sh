@@ -10,7 +10,7 @@ pkill -f "pktriot" 2>/dev/null || true
 sleep 2
 
 # Start Node.js server in background
-echo "Starting Node.js server on port 8000..."
+echo "Starting Node.js server on port 8001..."
 node server.js &
 NODE_PID=$!
 echo "✅ Node.js server started (PID: $NODE_PID)"
@@ -21,7 +21,7 @@ sleep 3
 # Start pktriot tunnel
 echo "Starting pktriot tunnel..."
 cd pktriot-0.15.6
-./pktriot http 8000 &
+./pktriot http 8001 &
 PKTRIOT_PID=$!
 cd ..
 echo "✅ Pktriot tunnel started (PID: $PKTRIOT_PID)"
@@ -30,7 +30,7 @@ echo "✅ Pktriot tunnel started (PID: $PKTRIOT_PID)"
 echo ""
 echo "🚀 Services started successfully!"
 echo "=================================="
-echo "Local server:  http://localhost:8000"
+echo "Local server:  http://localhost:8001"
 echo "Public tunnel: https://sleepy-thunder-45656.pktriot.net"
 echo "GitHub Pages:  https://shivin9.github.io/tunnel_test"
 echo ""

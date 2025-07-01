@@ -7,7 +7,7 @@ echo "======================"
 # Check Node.js server
 if pgrep -f "node server.js" > /dev/null; then
     echo "✅ Node.js server: RUNNING"
-    echo "   Local API: http://localhost:8000/api/status"
+    echo "   Local API: http://localhost:8001/api/status"
 else
     echo "❌ Node.js server: STOPPED"
 fi
@@ -23,7 +23,7 @@ fi
 # Test local server
 echo ""
 echo "🔍 Testing connections..."
-if curl -s http://localhost:8000/api/status > /dev/null; then
+if curl -s http://localhost:8001/api/status > /dev/null; then
     echo "✅ Local server responding"
 else
     echo "❌ Local server not responding"

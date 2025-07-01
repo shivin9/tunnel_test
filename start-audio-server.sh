@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-NODE_PORT=8000
+NODE_PORT=8001
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKTRIOT_DIR="$SCRIPT_DIR/pktriot-0.15.6"
 PKTRIOT_BINARY="$PKTRIOT_DIR/pktriot"

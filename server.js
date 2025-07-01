@@ -8,7 +8,7 @@ const session = require('express-session');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = 8000;
+const PORT = 8001;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 const ADMIN_UI_DIR = path.join(__dirname, 'docs/admin-ui');
 
